@@ -12,8 +12,6 @@ function love.update()
 end
 
 function love.draw()
-  love.graphics.setBackgroundColor(0.878, 0.878, 0.910) -- #E0E0E8
-
   if DEBUG then
     love.graphics.setColor(1,0,0)
     love.graphics.line(love.graphics.getWidth() / 2, 0 , love.graphics.getWidth() / 2 , love.graphics.getHeight())
@@ -22,6 +20,9 @@ function love.draw()
 
   -- Fix screen centre to (0, 0)
   love.graphics.translate(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
+
+  -- Draw Background lines
+  Renderer.draw_background()
 
   -- Draw stage
   Renderer.draw_stage_tiles()

@@ -4,20 +4,27 @@
 -- y = up for internal world coordinates
 
 local Tile = require "rendering.tile"
+local SideTile = require "rendering.sidetile"
+local BGline = require "rendering.bgline"
 
 local Renderer = {}
 
 local tiles = {}
+local sides = {}
+local bg_lines = {}
+
 local unit_length;
 local angle = 0
+local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
 
 --[[ cos (30) is approx. (1.7 / 2). (1 / 2) is military projection.
   Use something in between if you like.]]--
 local isometric_coefficient = 1.6
 
+local bg_colour = {r = 0.878, g = 0.878, b = 0.910} -- #E0E0E8
+local bg_line_colour = {r = 0, g = 0, b = 0}
 local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
-
 
 -- Public functions
 function Renderer.init(stage_size)
@@ -41,6 +48,40 @@ function Renderer.init(stage_size)
       table.insert(tiles, tile)
     end
   end
+
+  -- Generate sides
+  sides.n = SideTile:new('n', stage_size, stage_elevation, stage_base_fill_colour)
+  sides.s = SideTile:new('s', stage_size, stage_elevation, stage_base_fill_colour)
+  sides.w = SideTile:new('w', stage_size, stage_elevation, stage_base_fill_colour)
+  sides.e = SideTile:new('e', stage_size, stage_elevation, stage_base_fill_colour)
+
+  -- Generate BG
+    local units_horizontal = math.ceil(screen_width / unit_length
+                                      * isometric_coefficient / 2)
+    local units_vertical = math.ceil(screen_height / unit_length)
+
+    -- Choose the larger one because the stage ROTATES
+    local units_max = math.max(units_horizontal, units_vertical)
+
+    -- Whether or not to draw at the centre of the screen
+    local start_index = 1
+    if stage_size % 2 == 0 then start_index = 0 end
+
+    -- Draw horizontal lines
+    for i = start_index, units_max, 2 do
+      local pos_line = BGline:new(-units_max, i, units_max, i, stage_elevation)
+      local neg_line = BGline:new(-units_max, -i, units_max, -i, stage_elevation)
+      table.insert(bg_lines, pos_line)
+      table.insert(bg_lines, neg_line)
+    end
+
+    -- Draw vertical lines
+    for i = start_index, units_max, 2 do
+      local pos_line = BGline:new(i, -units_max, i, units_max, stage_elevation)
+      local neg_line = BGline:new(-i, -units_max, -i, units_max, stage_elevation)
+      table.insert(bg_lines, pos_line)
+      table.insert(bg_lines, neg_line)
+    end
 end
 
 -- Stage Tile rendering
@@ -54,6 +95,32 @@ function Renderer.draw_stage_tiles()
     Renderer.set_colour(stage_edge_colour)
     love.graphics.polygon("line", iso_vertices)
   end
+
+  -- SideTile rendering
+  local dirs = {'s', 'e', 'n', 'w'}
+  local viewable_side_index = math.floor((angle + 45) / 90)
+
+  for i = viewable_side_index, viewable_side_index + 1 do
+    local side = sides[dirs[(i) % 4 + 1]]
+    local iso_vertices = Renderer.iso_transform(side.vertices)
+
+    Renderer.set_colour(side.colour)
+    love.graphics.polygon("fill", iso_vertices)
+    Renderer.set_colour(stage_edge_colour)
+    love.graphics.polygon("line", iso_vertices)
+  end
+end
+
+-- BGline rendering
+function Renderer.draw_background()
+  love.graphics.setBackgroundColor(bg_colour.r, bg_colour.g, bg_colour.b)
+  Renderer.set_colour(bg_line_colour)
+  love.graphics.setLineWidth(0.8)
+
+  for _, line in pairs(bg_lines) do
+    local iso_vertices = Renderer.iso_transform(line.vertices)
+    love.graphics.line(iso_vertices)
+  end
 end
 
 -- Rotate stage by some delta or fix it to a specified angle
@@ -64,6 +131,14 @@ function Renderer.rotate(is_delta, degrees)
 
   for _, tile in pairs(tiles) do
     tile.vertices = Renderer.rotate_clockwise(tile.vertices, degrees)
+  end
+
+  for _, side in pairs(sides) do
+    side.vertices = Renderer.rotate_clockwise(side.vertices, degrees)
+  end
+
+  for _, line in pairs(bg_lines) do
+    line.vertices = Renderer.rotate_clockwise(line.vertices, degrees)
   end
 
   angle = (angle + degrees) % 360
