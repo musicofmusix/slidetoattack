@@ -26,6 +26,8 @@ local bg_line_colour = {r = 0, g = 0, b = 0}
 local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
 
+local light_angle = 65 -- 0 to 90 inclusive.
+
 -- Public functions
 function Renderer.init(stage_size)
   local screen_width = love.graphics.getWidth()
@@ -103,8 +105,9 @@ function Renderer.draw_stage_tiles()
   for i = viewable_side_index, viewable_side_index + 1 do
     local side = sides[dirs[(i) % 4 + 1]]
     local iso_vertices = Renderer.iso_transform(side.vertices)
+    local side_colour = side:generate_colour(angle, light_angle)
 
-    Renderer.set_colour(side.colour)
+    Renderer.set_colour(side_colour)
     love.graphics.polygon("fill", iso_vertices)
     Renderer.set_colour(stage_edge_colour)
     love.graphics.polygon("line", iso_vertices)
