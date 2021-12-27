@@ -1,4 +1,4 @@
-local Renderer = require 'rendering.renderer'
+local Renderer = require "rendering.renderer"
 
 DEBUG = true
 

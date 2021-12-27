@@ -34,7 +34,7 @@ function Renderer.init(stage_size)
   local screen_height = love.graphics.getHeight()
 
   -- VERY important for preventing 'spiky' side tiles
-  love.graphics.setLineJoin('bevel')
+  love.graphics.setLineJoin("bevel")
 
   if (screen_width < screen_height) then
     -- Divide by stage_size * 2 because one edge of a tile is length=2
@@ -52,10 +52,10 @@ function Renderer.init(stage_size)
   end
 
   -- Generate sides
-  sides.n = SideTile:new('n', stage_size, stage_elevation, stage_base_fill_colour)
-  sides.s = SideTile:new('s', stage_size, stage_elevation, stage_base_fill_colour)
-  sides.w = SideTile:new('w', stage_size, stage_elevation, stage_base_fill_colour)
-  sides.e = SideTile:new('e', stage_size, stage_elevation, stage_base_fill_colour)
+  sides.n = SideTile:new("n", stage_size, stage_elevation, stage_base_fill_colour)
+  sides.s = SideTile:new("s", stage_size, stage_elevation, stage_base_fill_colour)
+  sides.w = SideTile:new("w", stage_size, stage_elevation, stage_base_fill_colour)
+  sides.e = SideTile:new("e", stage_size, stage_elevation, stage_base_fill_colour)
 
   -- Generate BG
     local units_horizontal = math.ceil(screen_width / unit_length
@@ -99,7 +99,7 @@ function Renderer.draw_stage_tiles()
   end
 
   -- SideTile rendering
-  local dirs = {'s', 'e', 'n', 'w'}
+  local dirs = {"s", "e", "n", "w"}
   local viewable_side_index = math.floor((angle + 45) / 90)
 
   for i = viewable_side_index, viewable_side_index + 1 do
