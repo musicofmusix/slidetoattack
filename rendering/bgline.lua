@@ -7,7 +7,7 @@ function BGline:new (x1, z1, x2, z2, stage_elevation)
 	self.__index = self
 	setmetatable(instance, self)
 
-  -- Generate vertices
+  -- Generate world-coord vertices
   instance.vertices = {
     {x = x1, y = stage_elevation, z = z1},
     {x = x2, y = stage_elevation, z = z2}}

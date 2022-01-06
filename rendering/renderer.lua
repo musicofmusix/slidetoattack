@@ -1,18 +1,27 @@
 -- This is not a class
--- iso vertices = {x1, y1, x2, y2...}, for rendering
--- vertices = {{x=?, y=?, z=?}...}, for calculations
--- y = up for internal world coordinates
+--[[
+There are three coordinate systems.
+- game = [1, stage_size], game logic only, x and z.
+- world = [-stage_size, stage_size], renderer only, x, y, and z.
+- screen = on-screen coords, renderer only, x and y.
+]]--
 
 local Tile = require "rendering.tile"
 local SideTile = require "rendering.sidetile"
 local BGline = require "rendering.bgline"
+local Operator = require "rendering.operator"
+local AssetMapping = require "assets.assetmapping"
 
 local Renderer = {}
 
 local tiles = {}
 local sides = {}
 local bg_lines = {}
+local operator_sprites = {}
 
+local skeleton_renderer;
+
+local stage_size;
 local unit_length;
 local angle = 0
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
@@ -25,11 +34,13 @@ local bg_colour = {r = 0.878, g = 0.878, b = 0.910} -- #E0E0E8
 local bg_line_colour = {r = 0, g = 0, b = 0}
 local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
+local white = {r = 1, g = 1, b = 1}
 
 local light_angle = 65 -- 0 to 90 inclusive.
 
 -- Public functions
-function Renderer.init(stage_size)
+function Renderer.init(_stage_size)
+  stage_size = _stage_size
   local screen_width = love.graphics.getWidth()
   local screen_height = love.graphics.getHeight()
 
@@ -58,44 +69,47 @@ function Renderer.init(stage_size)
   sides.e = SideTile:new("e", stage_size, stage_elevation, stage_base_fill_colour)
 
   -- Generate BG
-    local units_horizontal = math.ceil(screen_width / unit_length
-                                      * isometric_coefficient / 2)
-    local units_vertical = math.ceil(screen_height / unit_length)
+  local units_horizontal = math.ceil(screen_width / unit_length
+                                    * isometric_coefficient / 2)
+  local units_vertical = math.ceil(screen_height / unit_length)
 
-    -- Choose the larger one because the stage ROTATES
-    local units_max = math.max(units_horizontal, units_vertical)
+  -- Choose the larger one because the stage ROTATES
+  local units_max = math.max(units_horizontal, units_vertical)
 
-    -- Whether or not to draw at the centre of the screen
-    local start_index = 1
-    if stage_size % 2 == 0 then start_index = 0 end
+  -- Whether or not to draw at the centre of the screen
+  local start_index = 1
+  if stage_size % 2 == 0 then start_index = 0 end
 
-    -- Draw horizontal lines
-    for i = start_index, units_max, 2 do
-      local pos_line = BGline:new(-units_max, i, units_max, i, stage_elevation)
-      local neg_line = BGline:new(-units_max, -i, units_max, -i, stage_elevation)
-      table.insert(bg_lines, pos_line)
-      table.insert(bg_lines, neg_line)
-    end
+  -- Add horizontal lines
+  for i = start_index, units_max, 2 do
+    local pos_line = BGline:new(-units_max, i, units_max, i, stage_elevation)
+    local neg_line = BGline:new(-units_max, -i, units_max, -i, stage_elevation)
+    table.insert(bg_lines, pos_line)
+    table.insert(bg_lines, neg_line)
+  end
 
-    -- Draw vertical lines
-    for i = start_index, units_max, 2 do
-      local pos_line = BGline:new(i, -units_max, i, units_max, stage_elevation)
-      local neg_line = BGline:new(-i, -units_max, -i, units_max, stage_elevation)
-      table.insert(bg_lines, pos_line)
-      table.insert(bg_lines, neg_line)
-    end
+  -- Add vertical lines
+  for i = start_index, units_max, 2 do
+    local pos_line = BGline:new(i, -units_max, i, units_max, stage_elevation)
+    local neg_line = BGline:new(-i, -units_max, -i, units_max, stage_elevation)
+    table.insert(bg_lines, pos_line)
+    table.insert(bg_lines, neg_line)
+  end
+    
+  -- Generate Spine2D skeleton renderer for operator sprites
+  skeleton_renderer = spine.SkeletonRenderer.new(true)
 end
 
--- Stage Tile rendering
+-- Stage rendering
 function Renderer.draw_stage_tiles()
   love.graphics.setLineWidth(2.5)
 
   for _, tile in pairs(tiles) do
-    local iso_vertices = Renderer.iso_transform(tile.vertices)
+    local screen_vertices = Renderer.world_to_screen(tile.vertices)
     Renderer.set_colour(tile.colour)
-    love.graphics.polygon("fill", iso_vertices)
+    love.graphics.polygon("fill", screen_vertices)
     Renderer.set_colour(stage_edge_colour)
-    love.graphics.polygon("line", iso_vertices)
+    love.graphics.polygon("line", screen_vertices)
   end
 
   -- SideTile rendering
@@ -104,13 +118,13 @@ function Renderer.draw_stage_tiles()
 
   for i = viewable_side_index, viewable_side_index + 1 do
     local side = sides[dirs[(i) % 4 + 1]]
-    local iso_vertices = Renderer.iso_transform(side.vertices)
+    local screen_vertices = Renderer.world_to_screen(side.vertices)
     local side_colour = side:generate_colour(angle, light_angle)
 
     Renderer.set_colour(side_colour)
-    love.graphics.polygon("fill", iso_vertices)
+    love.graphics.polygon("fill", screen_vertices)
     Renderer.set_colour(stage_edge_colour)
-    love.graphics.polygon("line", iso_vertices)
+    love.graphics.polygon("line", screen_vertices)
   end
 end
 
@@ -121,10 +135,52 @@ function Renderer.draw_background()
   love.graphics.setLineWidth(0.8)
 
   for _, line in pairs(bg_lines) do
-    local iso_vertices = Renderer.iso_transform(line.vertices)
-    love.graphics.line(iso_vertices)
+    local screen_vertices = Renderer.world_to_screen(line.vertices)
+    love.graphics.line(screen_vertices)
   end
 end
+
+-- Add a new operator Spine2D sprite
+-- Not part of init() as new operators can be added mid-game
+function Renderer.add_operator(id, class, game_coords)
+  local available_assets = AssetMapping[class]
+  math.randomseed(os.time())
+  local random_index = math.random(#available_assets)
+  local spine_name = available_assets[random_index]
+  
+  operator_sprites[id] = Operator:new(spine_name, Renderer.game_to_world(game_coords))
+end
+
+-- Update Spine2D sprites
+function Renderer.update_operators(dt)
+  -- Update the state with the delta time and update world transforms
+	for _, operator_sprite in pairs(operator_sprites) do
+		operator_sprite.spine_skel:update(dt)
+	end
+end
+
+-- Render all Spine2D sprites
+function Renderer.draw_operators()
+	Renderer.set_colour(white)
+	
+	local draw_queue = {}
+	for _, operator_sprite in pairs(operator_sprites) do
+	  local screenx = Renderer.xprime(operator_sprite.world_coords)
+	  local screeny = Renderer.yprime(operator_sprite.world_coords)
+	  -- screeny can be used as depth. smaller = top of screen = deeper
+	  table.insert(draw_queue, {skel = operator_sprite.spine_skel, x = screenx, y = screeny})
+	end
+	
+	table.sort(draw_queue, function(a, b) return a.y < b.y end)
+	for _, draw_item in pairs(draw_queue) do
+	  draw_item.skel:draw(skeleton_renderer, draw_item.x, draw_item.y)
+	end
+end
+
+-- Methods for moving, removing, etc. operator sprites come here
+function Renderer.move_operator() end
+function Renderer.attack_operator() end
+function Renderer.remove_operator() end
 
 -- Rotate stage by some delta or fix it to a specified angle
 function Renderer.rotate(is_delta, degrees)
@@ -133,33 +189,38 @@ function Renderer.rotate(is_delta, degrees)
   end
 
   for _, tile in pairs(tiles) do
-    tile.vertices = Renderer.rotate_clockwise(tile.vertices, degrees)
+    tile.vertices = Renderer.batch_rotate_clockwise(tile.vertices, degrees)
   end
 
   for _, side in pairs(sides) do
-    side.vertices = Renderer.rotate_clockwise(side.vertices, degrees)
+    side.vertices = Renderer.batch_rotate_clockwise(side.vertices, degrees)
   end
 
   for _, line in pairs(bg_lines) do
-    line.vertices = Renderer.rotate_clockwise(line.vertices, degrees)
+    line.vertices = Renderer.batch_rotate_clockwise(line.vertices, degrees)
   end
+
+  for _, operator_sprite in pairs(operator_sprites) do
+		operator_sprite.world_coords =
+		Renderer.rotate_clockwise(operator_sprite.world_coords, degrees)
+	end
 
   angle = (angle + degrees) % 360
 end
 
 -- Private functions
--- Convert internal world coords into on-screen isometric coords
-function Renderer.iso_transform(vertices)
-  local iso_vertices = {}
+-- Convert world coords into screen coords
+function Renderer.world_to_screen(vertices)
+  local screen_vertices = {}
 
   for _, vertex in pairs(vertices) do
-    local iso_x = Renderer.xprime(vertex)
-    local iso_z = Renderer.yprime(vertex)
-    table.insert(iso_vertices, iso_x)
-    table.insert(iso_vertices, iso_z)
+    local screenx = Renderer.xprime(vertex)
+    local screenz = Renderer.yprime(vertex)
+    table.insert(screen_vertices, screenx)
+    table.insert(screen_vertices, screenz)
   end
 
-  return iso_vertices
+  return screen_vertices
 end
 
 -- Calculate screen x-coord
@@ -168,21 +229,41 @@ function Renderer.xprime(vertex)
 end
 
 -- Calculate screen y-coord
-function Renderer.yprime (vertex)
+function Renderer.yprime(vertex)
   return unit_length * (vertex.y + (vertex.x + vertex.z) * math.sin(math.pi / 6))
 end
 
--- Rotate a set of word-coordinates about the y-axis (up)
-function Renderer.rotate_clockwise (vertices, theta)
+-- Convert game coords to world coords
+function Renderer.game_to_world(vertex)
+  local direct_conversion = {
+    x = vertex.x * 2 - stage_size - 1,
+    y = 0, -- This conversion function is for on-stage stuff only
+    z = vertex.z * 2 - stage_size - 1
+  }
+  
+  -- direct_conversion does not account for rotation, so...
+  return Renderer.rotate_clockwise(direct_conversion, angle)
+end
+
+-- Rotate a set of world-coordinates about the y-axis (up)
+function Renderer.batch_rotate_clockwise(vertices, theta)
+  local rot_vertices = {}
+  
+  for _, vertex in pairs(vertices) do
+    table.insert(rot_vertices, Renderer.rotate_clockwise(vertex, theta))
+  end
+  
+  return rot_vertices
+end
+
+-- Rotate a single world point about the y-axis
+function Renderer.rotate_clockwise(vertex, theta)
   local radians = math.rad(theta)
 
-  local rot_vertices = {}
-  for _, vertex in pairs(vertices) do
-    local xprime = vertex.x * math.cos(radians) - vertex.z * math.sin(radians)
-    local zprime = vertex.x * math.sin(radians) + vertex.z * math.cos(radians)
-    table.insert(rot_vertices, {x = xprime, y = vertex.y, z = zprime})
-  end
-  return rot_vertices
+  local xprime = vertex.x * math.cos(radians) - vertex.z * math.sin(radians)
+  local zprime = vertex.x * math.sin(radians) + vertex.z * math.cos(radians)
+  
+  return {x = xprime, y = vertex.y, z = zprime}
 end
 
 -- Helper for setting colour

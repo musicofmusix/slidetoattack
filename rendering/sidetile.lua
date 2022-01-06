@@ -4,7 +4,7 @@ local SideTile = {}
 -- Minimum coefficient value
 local coefficient_min = 0.3
 
-function SideTile:new (dir, stage_size, stage_elevation, initial_colour)
+function SideTile:new(dir, stage_size, stage_elevation, initial_colour)
   -- Class operations done here
   local instance = {base_colour = initial_colour}
 	self.__index = self
@@ -33,7 +33,7 @@ function SideTile:new (dir, stage_size, stage_elevation, initial_colour)
     angle_offset = 0
   end
 
-  -- Generate vertices
+  -- Generate world-coord vertices
   instance.vertices = {
     {x = start.x, y = stage_elevation, z = start.z},
     {x = start.x, y = 0, z = start.z},

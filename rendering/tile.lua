@@ -7,7 +7,7 @@ function Tile:new (centre, initial_colour)
 	self.__index = self
 	setmetatable(instance, self)
 
-  -- Generate vertices
+  -- Generate world-coord vertices
   instance.vertices = {
     {x = centre.x - 1, y = 0, z = centre.z + 1},
     {x = centre.x - 1, y = 0, z = centre.z - 1},
