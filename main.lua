@@ -22,12 +22,6 @@ function love.load()
 end
 
 function love.update(dt)
-  if love.keyboard.isDown("left") then
-    Renderer.rotate(true, -1)
-  elseif love.keyboard.isDown("right") then
-    Renderer.rotate(true, 1)
-  end
-  
   Renderer.update_operators(dt)
 end
 

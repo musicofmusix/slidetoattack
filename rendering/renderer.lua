@@ -151,7 +151,7 @@ function Renderer.add_operator(id, class, game_coords)
   local spine_name = available_assets[random_index]
   
   operator_sprites[id] =
-  Operator:new(spine_name, Renderer.game_to_world(game_coords), unit_length)
+    Operator:new(spine_name, Renderer.game_to_world(game_coords), unit_length)
 end
 
 -- Update Spine2D sprites
@@ -185,12 +185,22 @@ function Renderer.draw_operators()
 end
 
 -- Methods for moving, removing, etc. operator sprites come here
-function Renderer.move_operator() end
+-- Lerp between two game_coords and position an operator there
+function Renderer.move_operator(id, game_orgin, game_destination, progress)
+  -- origin and desitnation are both game_coords; progress is a [0, 1] float.
+  local lerp_gamex = Renderer.lerp(game_orgin.x, game_destination.x, progress)
+  local lerp_gamez = Renderer.lerp(game_orgin.z, game_destination.z, progress)
+  local lerp_world_coords =
+    Renderer.game_to_world({x = lerp_gamex, z = lerp_gamez})
+  
+  operator_sprites[id].world_coords = lerp_world_coords
+end
+
 function Renderer.attack_operator() end
 function Renderer.remove_operator() end
 
 -- Rotate stage by some delta or fix it to a specified angle
-function Renderer.rotate(is_delta, degrees)
+function Renderer.rotate_stage(is_delta, degrees)
   if not is_delta then
     degrees = degrees - angle
   end
@@ -276,6 +286,11 @@ end
 -- Helper for setting colour
 function Renderer.set_colour(colour)
   love.graphics.setColor(colour.r, colour.g, colour.b, colour.a or 1)
+end
+
+-- Lerp
+function Renderer.lerp(start, finish, progress)
+  return (finish - start) * progress + start
 end
 
 return Renderer
