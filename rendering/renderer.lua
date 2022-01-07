@@ -34,7 +34,8 @@ local bg_colour = {r = 0.878, g = 0.878, b = 0.910} -- #E0E0E8
 local bg_line_colour = {r = 0, g = 0, b = 0}
 local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
-local white = {r = 1, g = 1, b = 1}
+local operator_colour = {r = 1, g = 1, b = 1}
+local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
 
 local light_angle = 65 -- 0 to 90 inclusive.
 
@@ -46,6 +47,7 @@ function Renderer.init(_stage_size)
 
   -- VERY important for preventing 'spiky' side tiles
   love.graphics.setLineJoin("bevel")
+  love.graphics.setLineStyle("smooth")
 
   if (screen_width < screen_height) then
     -- Divide by stage_size * 2 because one edge of a tile is length=2
@@ -148,7 +150,8 @@ function Renderer.add_operator(id, class, game_coords)
   local random_index = math.random(#available_assets)
   local spine_name = available_assets[random_index]
   
-  operator_sprites[id] = Operator:new(spine_name, Renderer.game_to_world(game_coords))
+  operator_sprites[id] =
+  Operator:new(spine_name, Renderer.game_to_world(game_coords), unit_length)
 end
 
 -- Update Spine2D sprites
@@ -161,16 +164,20 @@ end
 
 -- Render all Spine2D sprites
 function Renderer.draw_operators()
-	Renderer.set_colour(white)
-	
 	local draw_queue = {}
 	for _, operator_sprite in pairs(operator_sprites) do
 	  local screenx = Renderer.xprime(operator_sprite.world_coords)
 	  local screeny = Renderer.yprime(operator_sprite.world_coords)
 	  -- screeny can be used as depth. smaller = top of screen = deeper
 	  table.insert(draw_queue, {skel = operator_sprite.spine_skel, x = screenx, y = screeny})
+	  
+	  -- Draw shadows here, before any sprites
+	  Renderer.set_colour(shadow_colour)
+	  love.graphics.ellipse( "fill", screenx, screeny,
+	    unit_length, unit_length / 3, 32) -- 32 Segments for smoothness
 	end
 	
+	Renderer.set_colour(operator_colour)
 	table.sort(draw_queue, function(a, b) return a.y < b.y end)
 	for _, draw_item in pairs(draw_queue) do
 	  draw_item.skel:draw(skeleton_renderer, draw_item.x, draw_item.y)
@@ -268,7 +275,7 @@ end
 
 -- Helper for setting colour
 function Renderer.set_colour(colour)
-  love.graphics.setColor(colour.r, colour.g, colour.b)
+  love.graphics.setColor(colour.r, colour.g, colour.b, colour.a or 1)
 end
 
 return Renderer

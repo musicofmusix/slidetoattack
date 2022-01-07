@@ -7,7 +7,7 @@ local stage_size = 5
 local stage_representation;
 
 function love.load()
-  love.window.setMode(800, 480, {resizable=false})
+  love.window.setMode(800, 480, {resizable = false, msaa = 4})
   
   stage_representation = Game.init(stage_size)
   Renderer.init(stage_size)
