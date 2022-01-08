@@ -5,17 +5,19 @@
 local GameOperator = require "gameoperator"
 local Game = {}
 
+Game.representation = {}
+
 function Game.init(stage_size)
-  local representation = {}
+  for i = 1, stage_size do
+    Game.representation[i] = {}
+  end
   
   -- Operator placement algorithm goes here.
   -- For the time being though...
-  representation[1] = GameOperator:new(1, true, 3, "melee")
-  representation[24] = GameOperator:new(2, true, 3, "ranged")
-  representation[7] = GameOperator:new(3, false, 3, "melee")
-  representation[23] = GameOperator:new(4, false, 3, "melee")
-  
-  return representation
+  Game.representation[1][1] = GameOperator:new(1, true, 3, "melee")
+  Game.representation[5][4] = GameOperator:new(2, true, 3, "ranged")
+  Game.representation[1][2] = GameOperator:new(3, false, 3, "melee")
+  Game.representation[5][3] = GameOperator:new(4, false, 3, "melee")
 end
 
 return Game
