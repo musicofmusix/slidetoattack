@@ -1,4 +1,6 @@
 -- This is a class
+-- A game logic version of the operator class; stores info used for gameplay
+
 local GameOperator = {}
 
 function GameOperator:new(id, is_friendly, hp, class)

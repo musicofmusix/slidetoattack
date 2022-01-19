@@ -1,4 +1,4 @@
--- slidetoattack
+-- slidetoattack main
 
 local Game = require "game"
 local Renderer = require "rendering.renderer"
@@ -20,8 +20,9 @@ function love.load()
     end
   end
   
+  -- Pass the above Game and Renderer instances to all states
   FSM.init(Game, Renderer)
-  FSM.change_state(FSM.states.IdleState)
+  FSM.change_state(FSM.states.IdleState) -- First state is Idle
 end
 
 function love.update(dt)
@@ -30,17 +31,22 @@ function love.update(dt)
 end
 
 function love.draw()
+  -- Get which layer the current state needs to draw on
+  local FSM_layer = FSM.get_draw_layer()
+  
   -- Fix screen centre to (0, 0)
   love.graphics.translate(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
-
+  if FSM_layer == 0 then FSM.draw_state() end
+  
   -- Draw Background lines
   Renderer.draw_background()
+  if FSM_layer == 1 then FSM.draw_state() end
   
   -- Draw stage
   Renderer.draw_stage_tiles()
+  if FSM_layer == 2 then FSM.draw_state() end
   
   -- Draw operators
   Renderer.draw_operators()
-  
-  FSM.draw_state()
+  if FSM_layer >= 3 then FSM.draw_state() end
 end

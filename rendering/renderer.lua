@@ -1,9 +1,10 @@
 -- This is not a class
+-- All operations regarding drawing are implemented as interfaces here
 --[[
-There are three coordinate systems.
-- game = [1, stage_size], game logic only, x and z.
-- world = [-stage_size, stage_size], renderer only, x, y, and z.
-- screen = on-screen coords, renderer only, x and y.
+There are three coordinate systems:
+- game = [1, stage_size], game logic only, x and z
+- world = [-stage_size, stage_size], renderer only, x, y, and z
+- screen = on-screen coords, renderer only, x and y
 ]]--
 
 local Tile = require "rendering.tile"
@@ -22,6 +23,11 @@ local operator_sprites = {}
 local skeleton_renderer;
 
 local stage_size;
+local screen_width;
+local screen_height;
+local screen_diag;
+local screen_diag_angle;
+local screen_diag_perpendicular;
 local unit_length;
 local angle = 0
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
@@ -36,14 +42,28 @@ local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
 local operator_colour = {r = 1, g = 1, b = 1}
 local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
+local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
+local slide_end_colour = {r = 0, g = 0, b = 0, a = 0.6}
 
 local light_angle = 65 -- 0 to 90 inclusive.
 
 -- Public functions
+function Renderer.get_screen_info()
+  return {
+    width = screen_width,
+    height = screen_height,
+    diag = screen_diag,
+    unit_length = unit_length
+  }
+end
+
 function Renderer.init(_stage_size)
   stage_size = _stage_size
-  local screen_width = love.graphics.getWidth()
-  local screen_height = love.graphics.getHeight()
+  screen_width = love.graphics.getWidth()
+  screen_height = love.graphics.getHeight()
+  screen_diag = math.sqrt(screen_width ^ 2 + screen_height ^ 2)
+  screen_diag_angle = math.atan(screen_height / screen_width)
+  screen_diag_perpendicular = screen_width / math.cos(screen_diag_angle)
 
   -- VERY important for preventing 'spiky' side tiles
   love.graphics.setLineJoin("bevel")
@@ -198,6 +218,34 @@ end
 
 function Renderer.attack_operator() end
 function Renderer.remove_operator() end
+
+-- Draw slide overlay
+function Renderer.draw_slide_overlay(dir, progress)
+  local angle_coefficient;
+  local rectanglex_coefficient
+  local angle_coeff;
+  
+  if dir.isn ~= dir.ise then angle_coeff = 1 else angle_coeff = -1 end
+  if dir.ise then x_coeff, x_offset = -1, 0 else x_coeff, x_offset = 1, 1 end
+  
+  love.graphics.push()
+	love.graphics.rotate(angle_coeff * screen_diag_angle)
+	
+	local rectangle_width = screen_diag * progress
+	local rectangle_height = screen_diag_perpendicular * 2
+	
+	local rectanglex = x_coeff * screen_diag / 2 - x_offset * rectangle_width
+  local rectangley = -screen_diag_perpendicular
+  
+  Renderer.set_colour({
+    r = Renderer.lerp(slide_start_colour.r, slide_end_colour.r, progress),
+    g = Renderer.lerp(slide_start_colour.g, slide_end_colour.g, progress),
+    b = Renderer.lerp(slide_start_colour.b, slide_end_colour.b, progress),
+    a = Renderer.lerp(slide_start_colour.a, slide_end_colour.a, progress),
+  })
+	love.graphics.rectangle('fill', rectanglex, rectangley, rectangle_width, rectangle_height)
+	love.graphics.pop()
+end
 
 -- Rotate stage by some delta or fix it to a specified angle
 function Renderer.rotate_stage(is_delta, degrees)

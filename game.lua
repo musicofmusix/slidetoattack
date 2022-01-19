@@ -1,6 +1,6 @@
 -- This is not a class
--- This modifies stage/game representations provided by main.
--- No data is stored here, only methods.
+-- This modifies stage/game representations provided by main
+-- No data is stored here, only methods
 
 local GameOperator = require "gameoperator"
 local Game = {}
@@ -12,7 +12,7 @@ function Game.init(stage_size)
     Game.representation[i] = {}
   end
   
-  -- Operator placement algorithm goes here.
+  -- Operator placement algorithm goes here
   -- For the time being though...
   Game.representation[1][1] = GameOperator:new(1, true, 3, "melee")
   Game.representation[5][4] = GameOperator:new(2, true, 3, "ranged")

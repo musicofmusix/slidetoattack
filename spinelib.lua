@@ -1,3 +1,7 @@
+--[[
+This module provides an interface for accessing Spine-Love's essential features
+]]--
+
 local spine = require "spine-love.spine"
 
 local SpineLib = {assetdir = "assets"}
@@ -54,14 +58,14 @@ function SpineLib:update (dt)
 	self.skeleton:updateWorldTransform()
 end
 
-function SpineLib:draw (skeleton_renderer, x, y) -- We only need one renderer.
+function SpineLib:draw (skeleton_renderer, x, y) -- We only need one renderer
 	if skeleton_renderer then
 	  self.skeleton.x, self.skeleton.y = x, y
 	  skeleton_renderer:draw(self.skeleton)
 	  end
 end
 
-function SpineLib.new_renderer () -- No need for self; hence the single colon.
+function SpineLib.new_renderer () -- No need for self; hence the single colon
 	if not renderer_instance then
 		renderer_instance = spine.SkeletonRenderer.new(true)
 	end
