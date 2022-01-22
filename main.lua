@@ -9,15 +9,17 @@ local stage_representation;
 
 function love.load()
   love.window.setMode(800, 480, {resizable = false, msaa = 4})
+  math.randomseed(os.time())
   
   Game.init(stage_size)
   Renderer.init(stage_size)
   
-  for i, rows in pairs(Game.representation) do
-    for j, gameoperator in pairs(rows) do
-      -- This section goes hand-in-hand with Game's implementation of stage rep
-      Renderer.add_operator(gameoperator.id, gameoperator.class, {x = i, z = j})
-    end
+  for index, gameoperator in pairs(Game.representation) do
+    Renderer.add_operator(
+      gameoperator.id,
+      gameoperator.is_friendly,
+      gameoperator.class,
+      Game.index_to_game(index))
   end
   
   -- Pass the above Game and Renderer instances to all states

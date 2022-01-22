@@ -164,11 +164,8 @@ end
 
 -- Add a new operator Spine2D sprite
 -- Not part of init() as new operators can be added mid-game
-function Renderer.add_operator(id, class, game_coords)
-  local available_assets = AssetMapping[class]
-  math.randomseed(os.time())
-  local random_index = math.random(#available_assets)
-  local spine_name = available_assets[random_index]
+function Renderer.add_operator(id, is_friendly, class, game_coords)
+  local spine_name = AssetMapping.get_name(is_friendly, class)
   
   operator_sprites[id] =
     Operator:new(spine_name, Renderer.game_to_world(game_coords), unit_length)
@@ -220,7 +217,8 @@ function Renderer.attack_operator() end
 function Renderer.remove_operator() end
 
 -- Draw slide overlay
-function Renderer.draw_slide_overlay(dir, progress)
+function Renderer.draw_slide_overlay(dir, _progress, opacity)
+  local progress = (_progress or 1)
   local angle_coefficient;
   local rectanglex_coefficient
   local angle_coeff;
@@ -241,7 +239,7 @@ function Renderer.draw_slide_overlay(dir, progress)
     r = Renderer.lerp(slide_start_colour.r, slide_end_colour.r, progress),
     g = Renderer.lerp(slide_start_colour.g, slide_end_colour.g, progress),
     b = Renderer.lerp(slide_start_colour.b, slide_end_colour.b, progress),
-    a = Renderer.lerp(slide_start_colour.a, slide_end_colour.a, progress),
+    a = Renderer.lerp(slide_start_colour.a, slide_end_colour.a, progress) * (opacity or 1),
   })
 	love.graphics.rectangle('fill', rectanglex, rectangley, rectangle_width, rectangle_height)
 	love.graphics.pop()

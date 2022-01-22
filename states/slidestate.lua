@@ -15,7 +15,7 @@ Distance (a portion of the screen's diagonal length) required to
 determine a slide direction and trigger a slide finish event, respectively
 ]]--
 local deadzone = 0.035;
-local threshold = 0.35;
+local threshold = 0.25;
 
 -- x and y variables separated for easy readablity
 local screen_info;
@@ -26,6 +26,7 @@ local currenty;
 local moved_length;
 local fixed_dir;
 local progress;
+local operator_movelist;
 
 function SlideState.enter(args)
   screen_info = Renderer.get_screen_info()
@@ -34,6 +35,7 @@ function SlideState.enter(args)
   fixed_dir = nil
   moved_length = 0
   progress = 0
+  operator_movelist = nil
 end
 
 function SlideState.draw()
@@ -73,18 +75,33 @@ function SlideState.mousemoved(dx, dy)
     local rotation_coeff;
     if fixed_dir.isn ~= fixed_dir.ise then rotation_coeff = -1 else rotation_coeff = 1 end
     
+    -- Apply progress
     Renderer.rotate_stage(false, Renderer.lerp(0, 45 * rotation_coeff, progress))
+    
+    -- Only generate movelist once per state entry
+    if not operator_movelist then
+      operator_movelist = Game.get_slide_moves(fixed_dir)
+    end
+    
+    -- Move operators back to their original position
+    for _, move_parameters in pairs(operator_movelist) do
+      Renderer.move_operator(
+        move_parameters.id,
+        move_parameters.origin,
+        move_parameters.destination,
+        progress)
+    end
   end
-  
-  -- For future implementation
-  if moved_length >= screen_info.diag * threshold then end
 end
 
 function SlideState.mousereleased(button)
   if button == 1 then
     if fixed_dir then
-    FSM.change_state(FSM.states.SlideCooldownState,
-      {fixed_dir = fixed_dir, progress = progress})
+      FSM.change_state(FSM.states.SlideCooldownState, {
+          fixed_dir = fixed_dir,
+          progress = progress, -- If 1 (100%), threshold is met
+          operator_movelist = operator_movelist
+        })
     else
       FSM.change_state(FSM.states.IdleState)
     end
