@@ -2,7 +2,7 @@
 -- Show a smooth slide retraction upon exiting SlideState
 -- progress variable reaches 0 -> idle
 
-local SlideCooldownState = {draw_layer = 1}
+local SlideCooldownState = {}
 
 local FSM, Renderer;
 function SlideCooldownState.init(fsm, game, renderer)
@@ -61,8 +61,11 @@ function SlideCooldownState.update(dt)
   end
 end
 
-function SlideCooldownState.draw()
+local function draw_slide_overlay()
   Renderer.draw_slide_overlay(fixed_dir, overlay_progress, overlay_opacity)
 end
+
+-- Overlay is drawn on layer 1 (after BGlines)
+SlideCooldownState.draw = {[1] = draw_slide_overlay}
 
 return SlideCooldownState

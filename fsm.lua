@@ -12,7 +12,6 @@ FSM.states = {
 }
 
 -- Methods are only called when they are defined in each respective state module
-
 -- Pass Game and Renderer instances from main to all states
 function FSM.init(game, renderer)
   for _, state in pairs(FSM.states) do state.init(FSM, game, renderer) end
@@ -22,13 +21,11 @@ function FSM.update_state(dt)
   if state.update then state.update(dt) end
 end
 
-function FSM.get_draw_layer()
-  -- Default is to draw last, after stage, operators, etc. have been drawn
-  if state.draw_layer then return state.draw_layer else return 99 end
-end
-
-function FSM.draw_state()
-  if state.draw then state.draw() end  
+function FSM.draw_state(layer)
+  if state.draw and state.draw[layer] then
+    local draw_function = state.draw[layer]
+    draw_function()
+  end
 end
 
 -- args is an optional table for a previous state to pass onto the next

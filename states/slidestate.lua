@@ -3,7 +3,7 @@
 -- Mouse/touch release before deadzone -> idle
 -- Mouse/touch release after deadzone -> slidecooldown
 
-local SlideState = {draw_layer = 1}
+local SlideState = {}
 
 local FSM, Game, Renderer;
 function SlideState.init(fsm, game, renderer)
@@ -38,9 +38,12 @@ function SlideState.enter(args)
   operator_movelist = nil
 end
 
-function SlideState.draw()
+local function draw_slide_overlay()
   if fixed_dir then Renderer.draw_slide_overlay(fixed_dir, progress) end
 end
+
+-- Overlay is drawn on layer 1 (after BGlines)
+SlideState.draw = {[1] = draw_slide_overlay}
 
 -- Only called upon mouse movement
 function SlideState.mousemoved(dx, dy)
