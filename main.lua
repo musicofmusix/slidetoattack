@@ -15,11 +15,15 @@ function love.load()
   Renderer.init(stage_size)
   
   for index, gameoperator in pairs(Game.representation) do
+    local game_coords = Game.index_to_game(index)
     Renderer.add_operator(
       gameoperator.id,
       gameoperator.is_friendly,
       gameoperator.class,
-      Game.index_to_game(index))
+      game_coords
+      )
+    
+    Renderer.add_arrowtile(gameoperator.id, gameoperator.is_friendly, game_coords)
   end
   
   -- Pass the above Game and Renderer instances to all states
@@ -45,7 +49,10 @@ function love.draw()
   Renderer.draw_stage_tiles()
   FSM.draw_state(2)
   
+  Renderer.draw_arrowtiles()
+  FSM.draw_state(3)
+  
   -- Draw operators
   Renderer.draw_operators()
-  FSM.draw_state(3)
+  FSM.draw_state(4)
 end

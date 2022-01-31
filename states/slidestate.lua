@@ -27,6 +27,7 @@ local moved_length;
 local fixed_dir;
 local progress;
 local operator_movelist;
+local is_fixed_initial;
 
 function SlideState.enter(args)
   screen_info = Renderer.get_screen_info()
@@ -36,6 +37,7 @@ function SlideState.enter(args)
   moved_length = 0
   progress = 0
   operator_movelist = nil
+  is_fixed_initial = false
 end
 
 local function draw_slide_overlay()
@@ -82,17 +84,26 @@ function SlideState.mousemoved(dx, dy)
     Renderer.rotate_stage(false, Renderer.lerp(0, 45 * rotation_coeff, progress))
     
     -- Only generate movelist once per state entry
-    if not operator_movelist then
+    if not is_fixed_initial then
       operator_movelist = Game.get_slide_moves(fixed_dir)
     end
     
-    -- Move operators back to their original position
-    for _, move_parameters in pairs(operator_movelist) do
+    -- Move operators and update ArrowTiles
+    for _, parameters in pairs(operator_movelist) do
       Renderer.move_operator(
-        move_parameters.id,
-        move_parameters.origin,
-        move_parameters.destination,
+        parameters.id,
+        parameters.origin,
+        parameters.destination,
         progress)
+      
+      if not is_fixed_initial then 
+        Renderer.update_arrowtile(
+          parameters.id,
+          parameters.origin,
+          parameters.destination,
+          progress)
+      else Renderer.update_arrowtile(parameters.id, nil, nil, progress)
+      end
     end
   end
 end

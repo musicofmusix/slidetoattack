@@ -10,6 +10,7 @@ There are three coordinate systems:
 local Tile = require "rendering.tile"
 local SideTile = require "rendering.sidetile"
 local BGline = require "rendering.bgline"
+local ArrowTile = require "rendering.arrowtile"
 local Operator = require "rendering.operator"
 local AssetMapping = require "assets.assetmapping"
 
@@ -18,6 +19,7 @@ local Renderer = {}
 local tiles = {}
 local sides = {}
 local bg_lines = {}
+local arrowtiles = {}
 local operator_sprites = {}
 
 local skeleton_renderer;
@@ -36,14 +38,16 @@ local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
   Use something in between if you like.]]--
 local isometric_coefficient = 1.6
 
-local bg_colour = {r = 0.878, g = 0.878, b = 0.910} -- #E0E0E8
+local bg_colour = {r = 0.878, g = 0.878, b = 0.910}
 local bg_line_colour = {r = 0, g = 0, b = 0}
-local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157} -- #282828
+local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157}
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
 local operator_colour = {r = 1, g = 1, b = 1}
 local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
 local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
 local slide_end_colour = {r = 0, g = 0, b = 0, a = 0.6}
+local friendly_arrowtile_colour = {r = 0.251, g = 0.659, b = 0.847}
+local enemy_arrowtile_colour = {r = 0.851, g = 0.255, b = 0.212}
 
 local light_angle = 65 -- 0 to 90 inclusive.
 
@@ -162,13 +166,81 @@ function Renderer.draw_background()
   end
 end
 
+-- Add an ArrowTile
+function Renderer.add_arrowtile(id, is_friendly, initial_game_origin)
+  local initial_world_coords = Renderer.game_to_world(initial_game_origin, false)
+  local arrowtile = ArrowTile:new(id, is_friendly, initial_world_coords)
+  arrowtiles[id] = arrowtile
+end
+
+-- Update an ArrowTile with a new origin, destination, or progress
+-- Note: Always update both origin and dest!
+function Renderer.update_arrowtile(id, game_origin, game_dest, progress)
+  if game_origin and game_dest then
+    arrowtiles[id].origin = Renderer.game_to_world(game_origin, false)
+    arrowtiles[id].dest = Renderer.game_to_world(game_dest, false)
+    
+    -- Smaller depth -> deeper; this depends on slide direction
+    local dir_sign = (game_dest.x - game_origin.x + game_dest.z - game_origin.z)
+    if dir_sign > 0 then arrowtiles[id].depth = -(game_dest.x + game_dest.z)
+    else arrowtiles[id].depth = (game_dest.x + game_dest.z)
+    end
+  end
+  if progress then arrowtiles[id].progress = progress end
+  
+  local vertices_norot = arrowtiles[id]:generate_vertices()
+  arrowtiles[id].vertices = Renderer.batch_rotate_clockwise(vertices_norot, angle)
+end
+
+-- Draw all ArrowTiles
+function Renderer.draw_arrowtiles()
+  local draw_queue = {}
+  for _, arrowtile in pairs(arrowtiles) do
+    local screen_vertices = Renderer.world_to_screen(arrowtile.vertices)
+    
+    local colour;
+    if arrowtile.is_friendly then colour = friendly_arrowtile_colour
+    else colour = enemy_arrowtile_colour end
+    
+    -- Depth: smaller = top of screen = deeper = draw first
+    table.insert(draw_queue, {
+      screen_vertices = screen_vertices,
+      depth = arrowtile.depth,
+      colour = colour
+    })
+  end
+  
+  table.sort(draw_queue, function(a, b) return a.depth < b.depth end)
+	for _, draw_item in pairs(draw_queue) do
+	  Renderer.set_colour(draw_item.colour)
+	  -- Use triangluation to break down concave polygons
+	  if #draw_item.screen_vertices >= 14 then -- 7 * 2
+	    local triangles = love.math.triangulate(draw_item.screen_vertices)
+      for _, triangle in pairs(triangles) do
+        love.graphics.polygon("fill", triangle)
+      end
+      
+    -- Polygons with less than 7 vertices are convex by default, can draw directly
+    else love.graphics.polygon("fill", draw_item.screen_vertices)
+    end
+    
+    Renderer.set_colour(stage_edge_colour)
+    love.graphics.polygon("line", draw_item.screen_vertices)
+	end
+end
+
+-- Remove a single ArrowTile
+function Renderer.remove_arrowtile(id)
+  arrowtiles[id] = nil
+end
+
 -- Add a new operator Spine2D sprite
 -- Not part of init() as new operators can be added mid-game
 function Renderer.add_operator(id, is_friendly, class, game_coords)
   local spine_name = AssetMapping.get_name(is_friendly, class)
   
   operator_sprites[id] =
-    Operator:new(spine_name, Renderer.game_to_world(game_coords), unit_length)
+    Operator:new(spine_name, Renderer.game_to_world(game_coords, true), unit_length)
 end
 
 -- Update Spine2D sprites
@@ -185,7 +257,7 @@ function Renderer.draw_operators()
 	for _, operator_sprite in pairs(operator_sprites) do
 	  local screenx = Renderer.xprime(operator_sprite.world_coords)
 	  local screeny = Renderer.yprime(operator_sprite.world_coords)
-	  -- screeny can be used as depth. smaller = top of screen = deeper
+	  -- screeny can be used as depth; smaller = top of screen = deeper = draw first
 	  table.insert(draw_queue, {skel = operator_sprite.spine_skel, x = screenx, y = screeny})
 	  
 	  -- Draw shadows here, before any sprites
@@ -203,12 +275,12 @@ end
 
 -- Methods for moving, removing, etc. operator sprites come here
 -- Lerp between two game_coords and position an operator there
-function Renderer.move_operator(id, game_orgin, game_destination, progress)
+function Renderer.move_operator(id, game_orgin, game_dest, progress)
   -- origin and desitnation are both game_coords; progress is a [0, 1] float.
-  local lerp_gamex = Renderer.lerp(game_orgin.x, game_destination.x, progress)
-  local lerp_gamez = Renderer.lerp(game_orgin.z, game_destination.z, progress)
+  local lerp_gamex = Renderer.lerp(game_orgin.x, game_dest.x, progress)
+  local lerp_gamez = Renderer.lerp(game_orgin.z, game_dest.z, progress)
   local lerp_world_coords =
-    Renderer.game_to_world({x = lerp_gamex, z = lerp_gamez})
+    Renderer.game_to_world({x = lerp_gamex, z = lerp_gamez}, true)
   
   operator_sprites[id].world_coords = lerp_world_coords
 end
@@ -262,7 +334,11 @@ function Renderer.rotate_stage(is_delta, degrees)
   for _, line in pairs(bg_lines) do
     line.vertices = Renderer.batch_rotate_clockwise(line.vertices, degrees)
   end
-
+  
+  for _, arrowtile in pairs(arrowtiles) do
+    arrowtile.vertices = Renderer.batch_rotate_clockwise(arrowtile.vertices, degrees)
+  end
+  
   for _, operator_sprite in pairs(operator_sprites) do
 		operator_sprite.world_coords =
 		Renderer.rotate_clockwise(operator_sprite.world_coords, degrees)
@@ -297,7 +373,7 @@ function Renderer.yprime(vertex)
 end
 
 -- Convert game coords to world coords
-function Renderer.game_to_world(vertex)
+function Renderer.game_to_world(vertex, rotate)
   local direct_conversion = {
     x = vertex.x * 2 - stage_size - 1,
     y = 0, -- This conversion function is for on-stage stuff only
@@ -305,7 +381,8 @@ function Renderer.game_to_world(vertex)
   }
   
   -- direct_conversion does not account for rotation, so...
-  return Renderer.rotate_clockwise(direct_conversion, angle)
+  if rotate then return Renderer.rotate_clockwise(direct_conversion, angle)
+  else return direct_conversion end
 end
 
 -- Rotate a set of world-coordinates about the y-axis (up)

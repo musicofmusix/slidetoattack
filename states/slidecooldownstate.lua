@@ -42,12 +42,14 @@ function SlideCooldownState.update(dt)
     
     overlay_progress = progress
     
-    for _, move_parameters in pairs(operator_movelist) do
+    for _, parameters in pairs(operator_movelist) do
       Renderer.move_operator(
-        move_parameters.id,
-        move_parameters.origin,
-        move_parameters.destination,
+        parameters.id,
+        parameters.origin,
+        parameters.destination,
         progress)
+      
+      Renderer.update_arrowtile(parameters.id, nil, nil, progress)
     end
     
     if progress == 0 then FSM.change_state(FSM.states.IdleState) end

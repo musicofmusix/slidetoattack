@@ -16,8 +16,9 @@ function Game.init(_stage_size)
   -- For the time being though...
   Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, true, 3, "melee"))
   Game.set_gameoperator({x = 5, z = 2}, GameOperator:new(2, false, 3, "melee"))
-  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(3, true, 3, "ranged"))
-  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(4, true, 3, "ranged"))
+  Game.set_gameoperator({x = 3, z = 3}, GameOperator:new(3, true, 3, "melee"))
+  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true, 3, "ranged"))
+  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, true, 3, "ranged"))
 end
 
 -- For all operators and a slide direction, get start and end game coords
