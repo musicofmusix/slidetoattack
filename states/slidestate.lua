@@ -102,9 +102,12 @@ function SlideState.mousemoved(dx, dy)
           parameters.origin,
           parameters.destination,
           progress)
+      
       else Renderer.update_arrowtile(parameters.id, nil, nil, progress)
       end
     end
+    
+    if not is_fixed_initial then is_fixed_initial = true end
   end
 end
 

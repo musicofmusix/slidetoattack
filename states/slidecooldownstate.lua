@@ -4,9 +4,9 @@
 
 local SlideCooldownState = {}
 
-local FSM, Renderer;
+local FSM, Game, Renderer;
 function SlideCooldownState.init(fsm, game, renderer)
-  FSM, Renderer = fsm, renderer
+  FSM, Game, Renderer = fsm, game, renderer
 end
 
 local progress;
@@ -18,7 +18,7 @@ local overlay_opacity;
 local rotation_coeff;
 
 -- The speed in which cooldown should take place
-local cooldown_coeff = 6
+local cooldown_coeff = 7
 
 function SlideCooldownState.enter(args)
   -- Assume progress and fixed_dir ~= nil as we're coming from SlideState
@@ -58,8 +58,33 @@ function SlideCooldownState.update(dt)
   else
     overlay_opacity = progress
     
-    -- Change IdleState to AttackState after implementation
-    if progress == 0 then FSM.change_state(FSM.states.IdleState) end
+    for _, parameters in pairs(operator_movelist) do
+      -- Update ArrowTile progress for retraction
+      Renderer.update_arrowtile(parameters.id, nil, nil, progress, true)
+    end
+    
+    -- Apply slide changes and move onto AttackState
+    if progress == 0 then
+      -- Apply operator movement changes
+      for _, parameters in pairs(operator_movelist) do
+        -- Update ArrowTile progress for retraction
+        Renderer.update_arrowtile(parameters.id, parameters.destination, parameters.destination, 0)
+        
+        -- We also add non-moving operators to the move queue
+        --[[
+        Why use a queue and not just move operators around directly?
+        Because the progress of representation[origin] = nil
+        can sometimes make operators dissapear from representation due to overwritings
+        ]]--
+        Game.add_move_queue(parameters.origin, parameters.destination)
+      end
+      
+      -- Apply all moves
+      Game.apply_move_queue()
+      
+      -- Move onto Attack
+      FSM.change_state(FSM.states.AttackState, {fixed_dir = fixed_dir})
+    end
   end
 end
 

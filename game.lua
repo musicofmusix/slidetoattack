@@ -6,6 +6,7 @@ local GameOperator = require "gameoperator"
 local Game = {}
 
 local stage_size;
+local move_queue = {}
 
 function Game.init(_stage_size)
   stage_size = _stage_size
@@ -22,6 +23,7 @@ function Game.init(_stage_size)
 end
 
 -- For all operators and a slide direction, get start and end game coords
+-- Note that this method also returns non-moving operators (e.g. against the end of the stage)
 function Game.get_slide_moves(dir)
   local list = {}
   for index, gameoperator in pairs(Game.representation) do
@@ -61,6 +63,24 @@ end
 
 function Game.set_gameoperator(game_coords, gameoperator)
   Game.representation[Game.game_to_index(game_coords)] = gameoperator
+end
+
+function Game.add_move_queue(game_origin, game_dest)
+  local dest_index = Game.game_to_index(game_dest)
+  move_queue[dest_index] = Game.get_gameoperator(game_origin)
+end
+
+function Game.apply_move_queue()
+  local new_representation = {}
+  for dest_index, gameoperator in pairs(move_queue) do
+    new_representation[dest_index] = gameoperator
+  end
+  
+  -- Overwrite previous representation
+  Game.representation = new_representation
+  
+  -- Clear move_queue
+  move_queue = {}
 end
 
 -- All because Lua has indices starting at 1...

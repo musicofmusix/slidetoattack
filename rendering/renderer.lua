@@ -46,8 +46,8 @@ local operator_colour = {r = 1, g = 1, b = 1}
 local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
 local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
 local slide_end_colour = {r = 0, g = 0, b = 0, a = 0.6}
-local friendly_arrowtile_colour = {r = 0.251, g = 0.659, b = 0.847}
-local enemy_arrowtile_colour = {r = 0.851, g = 0.255, b = 0.212}
+local friendly_arrowtile_colour = {r = 0.251, g = 0.659, b = 0.847, a = 0.8}
+local enemy_arrowtile_colour = {r = 0.851, g = 0.255, b = 0.212, a = 0.8}
 
 local light_angle = 65 -- 0 to 90 inclusive.
 
@@ -175,7 +175,7 @@ end
 
 -- Update an ArrowTile with a new origin, destination, or progress
 -- Note: Always update both origin and dest!
-function Renderer.update_arrowtile(id, game_origin, game_dest, progress)
+function Renderer.update_arrowtile(id, game_origin, game_dest, progress, is_retraction)
   if game_origin and game_dest then
     arrowtiles[id].origin = Renderer.game_to_world(game_origin, false)
     arrowtiles[id].dest = Renderer.game_to_world(game_dest, false)
@@ -188,7 +188,7 @@ function Renderer.update_arrowtile(id, game_origin, game_dest, progress)
   end
   if progress then arrowtiles[id].progress = progress end
   
-  local vertices_norot = arrowtiles[id]:generate_vertices()
+  local vertices_norot = arrowtiles[id]:generate_vertices(is_retraction)
   arrowtiles[id].vertices = Renderer.batch_rotate_clockwise(vertices_norot, angle)
 end
 

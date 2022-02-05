@@ -8,7 +8,9 @@ local state; -- This stores the state table/module, not the name
 FSM.states = {
   IdleState = require "states.idlestate",
   SlideState = require "states.slidestate",
-  SlideCooldownState = require "states.slidecooldownstate"
+  SlideCooldownState = require "states.slidecooldownstate",
+  AttackState = require "states.attackstate",
+  AttackCooldownState = require "states.attackcooldownstate"
 }
 
 -- Methods are only called when they are defined in each respective state module
