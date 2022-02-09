@@ -63,7 +63,13 @@ function SlideState.mousemoved(dx, dy)
     -- Get the end vertex of the screen where this direction is pointing
     local endx_coeff, endy_coeff;
     if fixed_dir.isn then endy_coeff = 0 else endy_coeff = 1 end
-    if fixed_dir.ise then endx_coeff = 1 else endx_coeff = 0 end
+    if fixed_dir.ise then
+      endx_coeff = 1
+      Renderer.set_operator_scale(1)
+    else
+      endx_coeff = 0
+      Renderer.set_operator_scale(-1)
+    end
     local endx = screen_info.width * endx_coeff
     local endy = screen_info.height * endy_coeff
   

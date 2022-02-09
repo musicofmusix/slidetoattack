@@ -32,11 +32,18 @@ local screen_diag_angle;
 local screen_diag_perpendicular;
 local unit_length;
 local angle = 0
+local operator_scale = 1
+local operator_goal_scale = 1
+
+local operator_flip_time = 0.12
+
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
 
 --[[ cos (30) is approx. (1.7 / 2). (1 / 2) is military projection.
   Use something in between if you like.]]--
 local isometric_coefficient = 1.6
+
+local light_angle = 65 -- 0 to 90 inclusive.
 
 local bg_colour = {r = 0.878, g = 0.878, b = 0.910}
 local bg_line_colour = {r = 0, g = 0, b = 0}
@@ -48,8 +55,6 @@ local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
 local slide_end_colour = {r = 0, g = 0, b = 0, a = 0.6}
 local friendly_arrowtile_colour = {r = 0.251, g = 0.659, b = 0.847, a = 0.8}
 local enemy_arrowtile_colour = {r = 0.851, g = 0.255, b = 0.212, a = 0.8}
-
-local light_angle = 65 -- 0 to 90 inclusive.
 
 -- Public functions
 function Renderer.get_screen_info()
@@ -245,8 +250,14 @@ end
 
 -- Update Spine2D sprites
 function Renderer.update_operators(dt)
+  if operator_scale ~= operator_goal_scale then
+    operator_scale = math.min(1, math.max(-1, operator_scale + dt * operator_goal_scale * 2 / operator_flip_time))
+  end
+  
   -- Update the state with the delta time and update world transforms
 	for _, operator_sprite in pairs(operator_sprites) do
+		operator_sprite.spine_skel:set_xscale(operator_scale)
+		
 		operator_sprite.spine_skel:update(dt)
 	end
 end
@@ -271,6 +282,10 @@ function Renderer.draw_operators()
 	for _, draw_item in pairs(draw_queue) do
 	  draw_item.skel:draw(skeleton_renderer, draw_item.x, draw_item.y)
 	end
+end
+
+function Renderer.set_operator_scale(new_scale)
+  operator_goal_scale = new_scale
 end
 
 -- Methods for moving, removing, etc. operator sprites come here
