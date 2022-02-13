@@ -83,7 +83,8 @@ function SlideCooldownState.update(dt)
       Game.apply_move_queue()
       
       -- Move onto Attack
-      FSM.change_state(FSM.states.AttackState, {fixed_dir = fixed_dir})
+      FSM.change_state(FSM.states.AttackState,
+        {fixed_dir = fixed_dir, operator_movelist = operator_movelist})
     end
   end
 end

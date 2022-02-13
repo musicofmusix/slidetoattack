@@ -7,9 +7,9 @@ local spine = require "spine-love.spine"
 local SpineLib = {assetdir = "assets"}
 local renderer_instance;
 
-function SpineLib:new(chardir, default_animation, scale)
+function SpineLib:new(superclass, chardir, default_animation, scale)
 	-- Class operations done here
-	local instance = {default_animation = default_animation, scale = scale}
+	local instance = {superclass = superclass, default_animation = default_animation, scale = scale}
 	self.__index = self
 	setmetatable(instance, self)
 
@@ -29,17 +29,22 @@ function SpineLib:new(chardir, default_animation, scale)
 	instance.state = spine.AnimationState.new(spine.AnimationStateData.new(skeleton_data))
 
 	instance.state:setAnimationByName(0, default_animation, true)
-
+  instance.current_pose = default_animation
+  
 	instance.state.onEvent = function (entry, event)
-	  if event.data.name == "something" then
-      -- do something
+	  if instance.superclass[event.data.name] then
+      local callback_function = instance.superclass[event.data.name]
+      callback_function(instance.superclass)
 	  end
 	end
 
-	-- Implement when needed
-	instance.state.onStart = function(entry) end
-	instance.state.onEnd = function(entry) end
-	instance.state.onComplete = function(entry) end
+	-- Implement more when needed
+	instance.state.onComplete = function(entry)
+	  if instance.superclass["onComplete"] then
+      local callback_function = instance.superclass["onComplete"]
+      callback_function(instance.superclass, instance.current_pose)
+	  end
+	end
 
 	instance.state:apply(instance.skeleton)
 
@@ -48,6 +53,7 @@ end
 
 function SpineLib:set_pose(pose_name, loop)
     self.state:setAnimationByName(0, pose_name, loop)
+    self.current_pose = pose_name
 end
 
 function SpineLib:set_xscale(new_scale)

@@ -15,11 +15,14 @@ function Game.init(_stage_size)
   
   -- Operator placement algorithm goes here
   -- For the time being though...
-  Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, true, 3, "melee"))
+  Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, false, 3, "melee"))
+  Game.set_gameoperator({x = 1, z = 2}, GameOperator:new(7, true, 3, "melee"))
   Game.set_gameoperator({x = 5, z = 2}, GameOperator:new(2, false, 3, "melee"))
-  Game.set_gameoperator({x = 3, z = 3}, GameOperator:new(3, true, 3, "melee"))
-  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true, 3, "ranged"))
-  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, true, 3, "ranged"))
+  Game.set_gameoperator({x = 4, z = 2}, GameOperator:new(8, false, 3, "melee"))
+  Game.set_gameoperator({x = 5, z = 3}, GameOperator:new(3, true, 3, "melee"))
+  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true, 3, "melee"))
+  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, false, 3, "melee"))
+  Game.set_gameoperator({x = 5, z = 5}, GameOperator:new(6, true, 3, "melee"))
 end
 
 -- For all operators and a slide direction, get start and end game coords
@@ -28,12 +31,14 @@ function Game.get_slide_moves(dir)
   local list = {}
   for index, gameoperator in pairs(Game.representation) do
     local coords = Game.index_to_game(index)
+    local is_friendly = gameoperator.is_friendly
     local sign, axis;
     if dir.isn then sign = -1 else sign = 1 end
     if dir.isn ~= dir.ise then main_axis, sub_axis = 'x', 'z' else main_axis, sub_axis = 'z', 'x' end
     
     -- Increment or decrement to stage_size or 0
     local count = 0
+    local is_attackable = false;
     local axis_end = math.max(stage_size * math.max(0, sign), 1)
     -- Re-checking already checked coords is inefficient
     -- But keeping track of already visited coords is also a hassle
@@ -41,17 +46,32 @@ function Game.get_slide_moves(dir)
       local check = {}
       check[main_axis], check[sub_axis] = i, coords[sub_axis]
       
-      if Game.get_gameoperator(check) then count = count + 1 end
+      local check_operator = Game.get_gameoperator(check)
+      if check_operator then count = count + 1
+        if check_operator.is_friendly ~= is_friendly and not is_attackable and count < 2 then
+          -- Increase count to 3 for range = 2
+          is_attackable = true
+        end      
+      end
     end
     
     local destination = {}
     destination[main_axis] = axis_end - sign * count
     destination[sub_axis] = coords[sub_axis]
     
+    local attack_target;
+    if is_attackable then
+      attack_target = {}
+      attack_target[main_axis] = destination[main_axis] + sign
+      attack_target[sub_axis] = coords[sub_axis]
+    end
+    
     table.insert(list, {
       id = gameoperator.id,
       origin = {x = coords.x, z = coords.z},
-      destination = destination})
+      destination = destination,
+      attack_target = attack_target -- Can be nil
+    })
   end
   
   return list

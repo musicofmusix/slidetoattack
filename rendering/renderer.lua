@@ -21,6 +21,8 @@ local sides = {}
 local bg_lines = {}
 local arrowtiles = {}
 local operator_sprites = {}
+local attackers = {}
+local victims = {}
 
 local skeleton_renderer;
 
@@ -244,8 +246,14 @@ end
 function Renderer.add_operator(id, is_friendly, class, game_coords)
   local spine_name = AssetMapping.get_name(is_friendly, class)
   
+  local callbacks = {
+    onHit = Renderer.callback_on_hit,
+    onAttackEnd = Renderer.callback_on_attack_end,
+    onDieEnd = Renderer.callback_on_die_end
+  }
+  
   operator_sprites[id] =
-    Operator:new(spine_name, Renderer.game_to_world(game_coords, true), unit_length)
+    Operator:new(id, spine_name, Renderer.game_to_world(game_coords, true), unit_length, callbacks)
 end
 
 -- Update Spine2D sprites
@@ -300,8 +308,45 @@ function Renderer.move_operator(id, game_orgin, game_dest, progress)
   operator_sprites[id].world_coords = lerp_world_coords
 end
 
-function Renderer.attack_operator() end
-function Renderer.remove_operator() end
+-- Operator animations
+function Renderer.add_attack_pair(attacker_id, victim_id)
+  attackers[victim_id] = attacker_id
+  victims[attacker_id] = victim_id
+end
+
+function Renderer.clear_attacks()
+  attackers = {}
+  victims = {}
+end
+
+function Renderer.start_attack()
+  -- The "starter victims" are those who are victims but are not attackers
+  for attacker_id, victim_id in pairs(victims) do
+    if not victims[victim_id] then
+      Renderer.play_animation(attacker_id, "Attack", false)
+    end
+  end
+end
+
+function Renderer.callback_on_hit(id) end
+
+function Renderer.callback_on_attack_end(attacker_id)
+  Renderer.play_animation(attacker_id, "Idle", true)
+  
+  local victim_id = victims[attacker_id]
+  Renderer.play_animation(victim_id, "Die", false)
+  
+  local next_attacker_id = attackers[attacker_id]
+  if next_attacker_id then Renderer.play_animation(next_attacker_id, "Attack", false) end
+end
+
+function Renderer.callback_on_die_end(victim_id)
+  -- Remove operator visually, make sure removal is done logically as well
+end
+
+function Renderer.play_animation(id, animation_name, is_loop)
+  operator_sprites[id].spine_skel:set_pose(animation_name, is_loop)
+end
 
 -- Draw slide overlay
 function Renderer.draw_slide_overlay(dir, _progress, opacity)
