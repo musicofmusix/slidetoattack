@@ -77,6 +77,15 @@ function Game.get_slide_moves(dir)
   return list
 end
 
+function Game.remove_gameoperators(id_list)
+  local removelist = {}
+  for index, gameoperator in pairs(Game.representation) do
+    if id_list[gameoperator.id] then table.insert(removelist, index) end
+  end
+  
+  for _, index in pairs(removelist) do Game.representation[index] = nil end
+end
+
 function Game.get_gameoperator(game_coords)
   return Game.representation[Game.game_to_index(game_coords)]
 end

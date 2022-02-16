@@ -36,6 +36,7 @@ local unit_length;
 local angle = 0
 local operator_scale = 1
 local operator_goal_scale = 1
+local active_attacks = 0
 
 local operator_flip_time = 0.12
 
@@ -51,7 +52,7 @@ local bg_colour = {r = 0.878, g = 0.878, b = 0.910}
 local bg_line_colour = {r = 0, g = 0, b = 0}
 local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157}
 local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
-local operator_colour = {r = 1, g = 1, b = 1}
+local operator_colour = {r = 1, g = 1, b = 1, a = 1}
 local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
 local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
 local slide_end_colour = {r = 0, g = 0, b = 0, a = 0.6}
@@ -201,39 +202,7 @@ end
 
 -- Draw all ArrowTiles
 function Renderer.draw_arrowtiles()
-  local draw_queue = {}
-  for _, arrowtile in pairs(arrowtiles) do
-    local screen_vertices = Renderer.world_to_screen(arrowtile.vertices)
-    
-    local colour;
-    if arrowtile.is_friendly then colour = friendly_arrowtile_colour
-    else colour = enemy_arrowtile_colour end
-    
-    -- Depth: smaller = top of screen = deeper = draw first
-    table.insert(draw_queue, {
-      screen_vertices = screen_vertices,
-      depth = arrowtile.depth,
-      colour = colour
-    })
-  end
-  
-  table.sort(draw_queue, function(a, b) return a.depth < b.depth end)
-	for _, draw_item in pairs(draw_queue) do
-	  Renderer.set_colour(draw_item.colour)
-	  -- Use triangluation to break down concave polygons
-	  if #draw_item.screen_vertices >= 14 then -- 7 * 2
-	    local triangles = love.math.triangulate(draw_item.screen_vertices)
-      for _, triangle in pairs(triangles) do
-        love.graphics.polygon("fill", triangle)
-      end
-      
-    -- Polygons with less than 7 vertices are convex by default, can draw directly
-    else love.graphics.polygon("fill", draw_item.screen_vertices)
-    end
-    
-    Renderer.set_colour(stage_edge_colour)
-    love.graphics.polygon("line", draw_item.screen_vertices)
-	end
+ 
 end
 
 -- Remove a single ArrowTile
@@ -249,11 +218,16 @@ function Renderer.add_operator(id, is_friendly, class, game_coords)
   local callbacks = {
     onHit = Renderer.callback_on_hit,
     onAttackEnd = Renderer.callback_on_attack_end,
-    onDieEnd = Renderer.callback_on_die_end
+    onDieEnd = Renderer.callback_on_die_end,
+    onFadeEnd = Renderer.callback_on_fade_end
   }
   
   operator_sprites[id] =
-    Operator:new(id, spine_name, Renderer.game_to_world(game_coords, true), unit_length, callbacks)
+    Operator:new(id, spine_name, Renderer.game_to_world(game_coords, true), unit_length, operator_colour, callbacks)
+end
+
+function Renderer.remove_operator(id)
+  operator_sprites[id] = nil
 end
 
 -- Update Spine2D sprites
@@ -267,28 +241,65 @@ function Renderer.update_operators(dt)
 		operator_sprite.spine_skel:set_xscale(operator_scale)
 		
 		operator_sprite.spine_skel:update(dt)
+		operator_sprite:update_fade(dt)
 	end
 end
 
--- Render all Spine2D sprites
+-- Render all Spine2D sprites and ArrowTiles
 function Renderer.draw_operators()
-	local draw_queue = {}
-	for _, operator_sprite in pairs(operator_sprites) do
+  local draw_queue = {}
+	for id, operator_sprite in pairs(operator_sprites) do
 	  local screenx = Renderer.xprime(operator_sprite.world_coords)
 	  local screeny = Renderer.yprime(operator_sprite.world_coords)
-	  -- screeny can be used as depth; smaller = top of screen = deeper = draw first
-	  table.insert(draw_queue, {skel = operator_sprite.spine_skel, x = screenx, y = screeny})
 	  
-	  -- Draw shadows here, before any sprites
-	  Renderer.set_colour(shadow_colour)
-	  love.graphics.ellipse( "fill", screenx, screeny,
-	    unit_length, unit_length / 3, 32) -- 32 Segments for smoothness
+	  local arrowtile = arrowtiles[id]
+	  local arrowtile_vertices = Renderer.world_to_screen(arrowtile.vertices)
+	  local arrowtile_colour;
+	  if arrowtile.is_friendly then arrowtile_colour = friendly_arrowtile_colour
+    else arrowtile_colour = enemy_arrowtile_colour end
+	  
+	  -- screeny can be used as depth; smaller = top of screen = deeper = draw first
+	  table.insert(draw_queue, {
+	    operator_skel = operator_sprite.spine_skel,
+	    operator_colour = operator_sprite.colour,
+	    x = screenx,
+	    y = screeny,
+	    arrowtile_vertices = arrowtile_vertices,
+	    arrowtile_depth = arrowtile.depth,
+	    arrowtile_colour = arrowtile_colour
+	  })
 	end
 	
-	Renderer.set_colour(operator_colour)
+	-- Draw ArrowTiles
+	table.sort(draw_queue, function(a, b) return a.arrowtile_depth < b.arrowtile_depth end)
+	for _, draw_item in pairs(draw_queue) do
+	  Renderer.set_colour(Renderer.multiply_colour(
+	    draw_item.arrowtile_colour, draw_item.operator_colour))
+	  -- Use triangluation to break down concave polygons
+	  if #draw_item.arrowtile_vertices >= 14 then -- 7 * 2
+	    local triangles = love.math.triangulate(draw_item.arrowtile_vertices)
+      for _, triangle in pairs(triangles) do
+        love.graphics.polygon("fill", triangle)
+      end
+      
+    -- Polygons with less than 7 vertices are convex by default, can draw directly
+    else love.graphics.polygon("fill", draw_item.arrowtile_vertices)
+    end
+    
+    Renderer.set_colour(stage_edge_colour)
+    love.graphics.polygon("line", draw_item.arrowtile_vertices)
+	end
+	
+	-- Draw operators
 	table.sort(draw_queue, function(a, b) return a.y < b.y end)
 	for _, draw_item in pairs(draw_queue) do
-	  draw_item.skel:draw(skeleton_renderer, draw_item.x, draw_item.y)
+	  -- Draw shadows here, before any sprites
+	  Renderer.set_colour(Renderer.multiply_colour(shadow_colour, draw_item.operator_colour))
+	  love.graphics.ellipse( "fill", draw_item.x, draw_item.y,
+	    unit_length, unit_length / 3, 32) -- 32 Segments for smoothness
+	  
+	  Renderer.set_colour(draw_item.operator_colour)
+	  draw_item.operator_skel:draw(skeleton_renderer, draw_item.x, draw_item.y)
 	end
 end
 
@@ -312,11 +323,14 @@ end
 function Renderer.add_attack_pair(attacker_id, victim_id)
   attackers[victim_id] = attacker_id
   victims[attacker_id] = victim_id
+  
+  active_attacks = active_attacks + 1
 end
 
 function Renderer.clear_attacks()
   attackers = {}
   victims = {}
+  active_attacks = 0
 end
 
 function Renderer.start_attack()
@@ -337,11 +351,25 @@ function Renderer.callback_on_attack_end(attacker_id)
   Renderer.play_animation(victim_id, "Die", false)
   
   local next_attacker_id = attackers[attacker_id]
-  if next_attacker_id then Renderer.play_animation(next_attacker_id, "Attack", false) end
+  if next_attacker_id then
+    Renderer.play_animation(next_attacker_id, "Attack", false)
+    end
 end
 
 function Renderer.callback_on_die_end(victim_id)
+  operator_sprites[victim_id]:start_fade()
+end
+
+function Renderer.callback_on_fade_end(victim_id)
   -- Remove operator visually, make sure removal is done logically as well
+  Renderer.remove_operator(victim_id)
+  Renderer.remove_arrowtile(victim_id)
+  
+  active_attacks = active_attacks - 1
+end
+
+function Renderer.get_active_attacks()
+  return active_attacks
 end
 
 function Renderer.play_animation(id, animation_name, is_loop)
@@ -469,6 +497,15 @@ end
 -- Helper for setting colour
 function Renderer.set_colour(colour)
   love.graphics.setColor(colour.r, colour.g, colour.b, colour.a or 1)
+end
+
+function Renderer.multiply_colour(colour1, colour2)
+  return {
+    r = colour1.r * colour2.r,
+    g = colour1.g * colour2.g,
+    b = colour1.b * colour2.b,
+    a = (colour1.a or 1) * (colour2.a or 1)
+  }
 end
 
 -- Lerp
