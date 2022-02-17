@@ -48,9 +48,9 @@ function Game.get_slide_moves(dir)
       
       local check_operator = Game.get_gameoperator(check)
       if check_operator then count = count + 1
-        if check_operator.is_friendly ~= is_friendly and not is_attackable and count < 2 then
-          -- Increase count to 3 for range = 2
-          is_attackable = true
+        -- If the first operator met is not friendly...
+        if check_operator.is_friendly ~= is_friendly and not is_attackable and count <= 1 then
+          is_attackable = true -- Mark that operator as the attack target
         end      
       end
     end
@@ -62,6 +62,7 @@ function Game.get_slide_moves(dir)
     local attack_target;
     if is_attackable then
       attack_target = {}
+      -- attack_target is simply one position adjacent from destination
       attack_target[main_axis] = destination[main_axis] + sign
       attack_target[sub_axis] = coords[sub_axis]
     end
@@ -77,8 +78,10 @@ function Game.get_slide_moves(dir)
   return list
 end
 
+-- Remove multiple gameoperators from representation by id
 function Game.remove_gameoperators(id_list)
   local removelist = {}
+  -- We don't remove from representation here has it will mess up the for loop
   for index, gameoperator in pairs(Game.representation) do
     if id_list[gameoperator.id] then table.insert(removelist, index) end
   end
@@ -86,19 +89,23 @@ function Game.remove_gameoperators(id_list)
   for _, index in pairs(removelist) do Game.representation[index] = nil end
 end
 
+-- Get gameoperator by game coordinates
 function Game.get_gameoperator(game_coords)
   return Game.representation[Game.game_to_index(game_coords)]
 end
 
+-- Set gameoperator by game coordinates
 function Game.set_gameoperator(game_coords, gameoperator)
   Game.representation[Game.game_to_index(game_coords)] = gameoperator
 end
 
+-- Queue a move action of a single gameoperator from origin to dest
 function Game.add_move_queue(game_origin, game_dest)
   local dest_index = Game.game_to_index(game_dest)
   move_queue[dest_index] = Game.get_gameoperator(game_origin)
 end
 
+-- Apply all moves in the move queue
 function Game.apply_move_queue()
   local new_representation = {}
   for dest_index, gameoperator in pairs(move_queue) do

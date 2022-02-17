@@ -9,18 +9,13 @@ function AttackState.init(fsm, game, renderer)
   FSM, Game, Renderer = fsm, game, renderer
 end
 
--- Countdown exists only to emulate AttackState behaviour, will be removed eventually
-local countdown = 0 -- seconds
-local count;
 local fixed_dir;
 
 function AttackState.enter(args)
-  count = countdown
-  fixed_dir = args.fixed_dir
+  fixed_dir = args.fixed_dir -- fixed_dir is not used here but is needed in AttackCooldownState
   local attacklist = AttackState.extract_attacklist(args.operator_movelist)
   local victimlist = {}
   for _, attack in pairs(attacklist) do
-    
     local attacker_id = Game.get_gameoperator(attack.attacker_coords).id
     local victim_id = Game.get_gameoperator(attack.victim_coords).id
     Renderer.add_attack_pair(attacker_id, victim_id)
@@ -28,22 +23,26 @@ function AttackState.enter(args)
     victimlist[victim_id] = true
   end
   
+  --[[All operators being attacked (victims) are removed immediately from logic,
+  albeit going through a death animation visually]]--
   Game.remove_gameoperators(victimlist)
   
   Renderer.start_attack()
 end
 
 function AttackState.finish()
+  -- Clear all attack-related state variables in Renderer
   Renderer.clear_attacks()
 end
 
 function AttackState.update(dt)
+  -- AttackState is finished when all attacks are finished in Renderer
   if Renderer.get_active_attacks() == 0 then
     FSM.change_state(FSM.states.AttackCooldownState, {fixed_dir = fixed_dir})
   end
 end
 
--- operator_movelist contains both move and attack data
+-- operator_movelist contains both move and attack data, extract the latter
 function AttackState.extract_attacklist(movelist)
   local attacklist = {}
   for _, parameters in pairs(movelist) do

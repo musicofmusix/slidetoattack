@@ -49,10 +49,7 @@ function love.draw()
   Renderer.draw_stage_tiles()
   FSM.draw_state(2)
   
-  Renderer.draw_arrowtiles()
-  FSM.draw_state(3)
-  
   -- Draw operators
-  Renderer.draw_operators()
-  FSM.draw_state(4)
+  Renderer.draw_operators_arrowtiles()
+  FSM.draw_state(3)
 end
