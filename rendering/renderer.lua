@@ -46,6 +46,8 @@ local operator_goal_scale = 1
 local active_attacks = 0
 
 -- Paramaters available for user modification
+local sprite_scale = 0.0042 -- Operator Spine2D sprite scale
+local sprite_speed = 0.75 -- Operator Spine2D animation speed
 local operator_flip_time = 0.12
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
 --[[ cos (30) is approx. (1.7 / 2). (1 / 2) is military projection
@@ -272,18 +274,20 @@ end
 
 -- Add a new operator Spine2D sprite
 -- Not part of init() as new operators can be added mid-game
-function Renderer.add_operator(id, is_friendly, class, game_coords)
-  local spine_name = AssetMapping.get_name(is_friendly, class)
+function Renderer.add_operator(id, is_friendly, game_coords)
+  local spine_name = AssetMapping.get_name(is_friendly)
   
   local callbacks = {
     onHit = Renderer.callback_on_hit,
     onAttackEnd = Renderer.callback_on_attack_end,
+    onHurtEnd = Renderer.callback_on_hurt_end,
     onDieEnd = Renderer.callback_on_die_end,
     onFadeEnd = Renderer.callback_on_fade_end
   }
   
   operator_sprites[id] =
-    Operator:new(id, spine_name, Renderer.game_to_world(game_coords, true), unit_length, operator_colour, callbacks)
+    Operator:new(id, spine_name, Renderer.game_to_world(game_coords, true),
+      unit_length, operator_colour, sprite_scale, sprite_speed, callbacks)
 end
 
 -- Update Spine2D sprites
@@ -409,7 +413,10 @@ function Renderer.start_attack()
 end
 
 -- Callback on operator attack hit animation
-function Renderer.callback_on_hit(id) end
+function Renderer.callback_on_hit(attacker_id)
+  local victim_id = victims[attacker_id]
+  Renderer.play_animation(victim_id, "Hurt", false)
+end
 
 -- Callback on operator attack animation end
 function Renderer.callback_on_attack_end(attacker_id)
@@ -422,6 +429,11 @@ function Renderer.callback_on_attack_end(attacker_id)
   if next_attacker_id then
     Renderer.play_animation(next_attacker_id, "Attack", false)
     end
+end
+
+-- Callback on operator hurt animation end
+function Renderer.callback_on_hurt_end(victim_id)
+  Renderer.play_animation(victim_id, "Idle", true)
 end
 
 -- Callback on operator death animation end

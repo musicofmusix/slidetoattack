@@ -4,7 +4,8 @@ local Operator = {}
 
 local fade_time = 0.5 -- In seconds
 
-function Operator:new(id, spine_name, world_coords, unit_length, default_colour, renderer_callbacks)
+function Operator:new
+  (id, spine_name, world_coords, unit_length, default_colour, scale, speed, renderer_callbacks)
   -- Class operations done here
 	local instance = {
 	  id = id,
@@ -16,8 +17,8 @@ function Operator:new(id, spine_name, world_coords, unit_length, default_colour,
 	self.__index = self
 	setmetatable(instance, self)
   
-  local sprite_scale = unit_length * 0.00615 -- A result of experimentation
-  local spine_skel = SpineLib:new(instance, spine_name, "Idle", sprite_scale)
+  local sprite_scale = unit_length * scale
+  local spine_skel = SpineLib:new(instance, spine_name, "Idle", sprite_scale, speed)
   
   instance.spine_skel = spine_skel
   
@@ -52,7 +53,10 @@ function Operator:onAttack()
 end
 
 function Operator:onComplete(animation_name)
-  if animation_name == "Attack" then
+  if animation_name == "Hurt" then
+    local renderer_callback = self.renderer_callbacks.onHurtEnd
+    renderer_callback(self.id)
+  elseif animation_name == "Attack" then
     local renderer_callback = self.renderer_callbacks.onAttackEnd
     renderer_callback(self.id)
   elseif animation_name == "Die" then

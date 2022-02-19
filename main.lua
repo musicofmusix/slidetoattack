@@ -19,7 +19,6 @@ function love.load()
     Renderer.add_operator(
       gameoperator.id,
       gameoperator.is_friendly,
-      gameoperator.class,
       game_coords
       )
     

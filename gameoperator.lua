@@ -3,13 +3,11 @@
 
 local GameOperator = {}
 
-function GameOperator:new(id, is_friendly, hp, class)
+function GameOperator:new(id, is_friendly)
   -- Class operations done here
 	local instance = {
     id = id,
     is_friendly = is_friendly,
-    hp = hp,
-    class = class
   }
 	self.__index = self
 	setmetatable(instance, self)

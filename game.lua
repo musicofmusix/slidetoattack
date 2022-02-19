@@ -15,14 +15,14 @@ function Game.init(_stage_size)
   
   -- Operator placement algorithm goes here
   -- For the time being though...
-  Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, false, 3, "melee"))
-  Game.set_gameoperator({x = 1, z = 2}, GameOperator:new(7, true, 3, "melee"))
-  Game.set_gameoperator({x = 5, z = 2}, GameOperator:new(2, false, 3, "melee"))
-  Game.set_gameoperator({x = 4, z = 2}, GameOperator:new(8, false, 3, "melee"))
-  Game.set_gameoperator({x = 5, z = 3}, GameOperator:new(3, true, 3, "melee"))
-  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true, 3, "melee"))
-  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, false, 3, "melee"))
-  Game.set_gameoperator({x = 5, z = 5}, GameOperator:new(6, true, 3, "melee"))
+  Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, false))
+  Game.set_gameoperator({x = 1, z = 2}, GameOperator:new(7, true))
+  Game.set_gameoperator({x = 5, z = 2}, GameOperator:new(2, false))
+  Game.set_gameoperator({x = 4, z = 2}, GameOperator:new(8, false))
+  Game.set_gameoperator({x = 5, z = 3}, GameOperator:new(3, true))
+  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true))
+  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, false))
+  Game.set_gameoperator({x = 5, z = 5}, GameOperator:new(6, true))
 end
 
 -- For all operators and a slide direction, get start and end game coords

@@ -7,9 +7,10 @@ local spine = require "spine-love.spine"
 local SpineLib = {assetdir = "assets"}
 local renderer_instance;
 
-function SpineLib:new(superclass, chardir, default_animation, scale)
+function SpineLib:new(superclass, chardir, default_animation, scale, speed)
 	-- Class operations done here
-	local instance = {superclass = superclass, default_animation = default_animation, scale = scale}
+	local instance =
+	  {superclass = superclass, default_animation = default_animation, scale = scale, speed = speed}
 	self.__index = self
 	setmetatable(instance, self)
 
@@ -61,7 +62,7 @@ function SpineLib:set_xscale(new_scale)
 end
 
 function SpineLib:update(dt)
-	self.state:update(dt)
+	self.state:update(dt * self.speed)
 	self.state:apply(self.skeleton)
 
 	self.skeleton:updateWorldTransform()
