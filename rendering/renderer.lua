@@ -47,7 +47,7 @@ local active_attacks = 0
 
 -- Paramaters available for user modification
 local sprite_scale = 0.0042 -- Operator Spine2D sprite scale
-local sprite_speed = 0.75 -- Operator Spine2D animation speed
+local sprite_speed = 0.7 -- Operator Spine2D animation speed
 local operator_flip_time = 0.12
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
 --[[ cos (30) is approx. (1.7 / 2). (1 / 2) is military projection

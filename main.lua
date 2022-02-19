@@ -4,14 +4,17 @@ local Game = require "game"
 local Renderer = require "rendering.renderer"
 local FSM = require "fsm"
 
-local stage_size = 5
 local stage_representation;
+
+local stage_size = 5
+local number_of_friendlies = 7
+local number_of_enemies = 7
 
 function love.load()
   love.window.setMode(800, 480, {resizable = false, msaa = 4})
   math.randomseed(os.time())
   
-  Game.init(stage_size)
+  Game.init(stage_size, number_of_friendlies, number_of_enemies)
   Renderer.init(stage_size)
   
   for index, gameoperator in pairs(Game.representation) do

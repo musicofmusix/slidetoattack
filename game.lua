@@ -8,21 +8,43 @@ local Game = {}
 local stage_size;
 local move_queue = {}
 
-function Game.init(_stage_size)
+function Game.init(_stage_size, number_of_friendlies, number_of_enemies)
   stage_size = _stage_size
   
   Game.representation = {}
   
-  -- Operator placement algorithm goes here
-  -- For the time being though...
-  Game.set_gameoperator({x = 1, z = 1}, GameOperator:new(1, false))
-  Game.set_gameoperator({x = 1, z = 2}, GameOperator:new(7, true))
-  Game.set_gameoperator({x = 5, z = 2}, GameOperator:new(2, false))
-  Game.set_gameoperator({x = 4, z = 2}, GameOperator:new(8, false))
-  Game.set_gameoperator({x = 5, z = 3}, GameOperator:new(3, true))
-  Game.set_gameoperator({x = 2, z = 3}, GameOperator:new(4, true))
-  Game.set_gameoperator({x = 5, z = 4}, GameOperator:new(5, false))
-  Game.set_gameoperator({x = 5, z = 5}, GameOperator:new(6, true))
+  local friendly_rep = {}
+  local enemy_rep = {}
+  
+  for i = 1, stage_size do
+    for j = 1, stage_size do
+      -- Alternating friendlies and enemies; checkerboard style
+      -- First tile/operator is friendly
+      local is_friendly = (i % 2 == 0) == (j % 2 == 0)
+      if is_friendly then table.insert(friendly_rep, {x = i, z = j})
+      else table.insert(enemy_rep, {x = i, z = j}) end
+    end
+  end
+  
+  -- Do Fisher-Yates shuffles
+  for i = #friendly_rep, 2, -1 do
+    local j = math.random(i)
+    friendly_rep[i], friendly_rep[j] = friendly_rep[j], friendly_rep[i]
+  end
+  for i = #enemy_rep, 2, -1 do
+    local j = math.random(i)
+    enemy_rep[i], enemy_rep[j] = enemy_rep[j], enemy_rep[i]
+  end
+  
+  local id = 1
+  for i = 1, number_of_friendlies do
+    Game.set_gameoperator(friendly_rep[i], GameOperator:new(id, true))
+    id = id + 1
+  end
+  for i = 1, number_of_enemies do
+    Game.set_gameoperator(enemy_rep[i], GameOperator:new(id, false))
+    id = id + 1
+  end
 end
 
 -- For all operators and a slide direction, get start and end game coords

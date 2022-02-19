@@ -46,7 +46,7 @@ function SpineLib:new(superclass, chardir, default_animation, scale, speed)
       callback_function(instance.superclass, instance.current_pose)
 	  end
 	end
-
+  
 	instance.state:apply(instance.skeleton)
 
 	return instance
@@ -59,6 +59,10 @@ end
 
 function SpineLib:set_xscale(new_scale)
   self.skeleton.scaleX = new_scale
+end
+
+function SpineLib:set_random_animation_offset()
+  self.state.tracks[0].trackTime = math.random()
 end
 
 function SpineLib:update(dt)

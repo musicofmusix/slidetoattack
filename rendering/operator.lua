@@ -19,6 +19,7 @@ function Operator:new
   
   local sprite_scale = unit_length * scale
   local spine_skel = SpineLib:new(instance, spine_name, "Idle", sprite_scale, speed)
+  spine_skel:set_random_animation_offset()
   
   instance.spine_skel = spine_skel
   
