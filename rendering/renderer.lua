@@ -30,6 +30,9 @@ local victims = {}
 -- Spine2D skeleton renderer
 local skeleton_renderer;
 
+-- Main font
+local font;
+
 -- Screen constants (variables? since screen can resize)
 local stage_size;
 local screen_width;
@@ -48,6 +51,7 @@ local active_attacks = 0
 -- Paramaters available for user modification
 local sprite_scale = 0.0042 -- Operator Spine2D sprite scale
 local sprite_speed = 0.7 -- Operator Spine2D animation speed
+local font_scale = 2 -- Font size relative to unit_length
 local operator_flip_time = 0.12
 local stage_elevation = 1.5 -- Stage elevation goes DOWN from the stage (y=0)
 --[[ cos (30) is approx. (1.7 / 2). (1 / 2) is military projection
@@ -72,10 +76,10 @@ palettes.lab.bgline = {r = 0.408, g = 0.408, b = 0.408}
 palettes.lab.stage = {r = 0.878, g = 0.878, b = 0.878}
 palettes.lab.stageedge = {r = 0.125, g = 0.125, b = 0.125}
 
-palettes.forest.bg = {r = 0.157, g = 0.22, b = 0.157}
+palettes.forest.bg = {r = 0.294, g = 0.378, b = 0.316}
 palettes.forest.bgline = {r = 0.533, g = 0.533, b = 0.439}
-palettes.forest.stage = {r = 0.314, g = 0.408, b = 0.376}
-palettes.forest.stageedge = {r = 0.266, g = 0.255, b = 0.078}
+palettes.forest.stage = {r = 0.257, g = 0.32, b = 0.257}
+palettes.forest.stageedge = {r = 0.156, g = 0.145, b = 0.088}
 
 local bg_colour;
 local bg_line_colour;
@@ -121,13 +125,18 @@ function Renderer.init(_stage_size)
   bg_line_colour = palette.bgline
   stage_edge_colour = palette.stageedge
   stage_base_fill_colour = palette.stage
-
+  
+  -- Calculate unit_length for proportioning 
   if (screen_width < screen_height) then
     -- Divide by stage_size * 2 because one edge of a tile is length=2
     unit_length = (screen_width / 2) / (stage_size * 2)
   else
     unit_length = screen_height / isometric_coefficient / (stage_size * 2)
   end
+  
+  -- Set main font size
+  font_size = unit_length * font_scale
+  font = love.graphics.newFont(AssetMapping.get_font(), font_size)
 
   -- Generate tiles
   for i = -(stage_size - 1), (stage_size - 1), 2 do
@@ -213,6 +222,8 @@ function Renderer.draw_stage_tiles()
     local screen_vertices = Renderer.world_to_screen(tile.vertices)
     Renderer.set_colour(tile.colour)
     love.graphics.polygon("fill", screen_vertices)
+    
+    love.graphics.setLineWidth(unit_length / 12)
     Renderer.set_colour(stage_edge_colour)
     love.graphics.polygon("line", screen_vertices)
   end
@@ -228,6 +239,8 @@ function Renderer.draw_stage_tiles()
 
     Renderer.set_colour(side_colour)
     love.graphics.polygon("fill", screen_vertices)
+    
+    love.graphics.setLineWidth(unit_length / 12)
     Renderer.set_colour(stage_edge_colour)
     love.graphics.polygon("line", screen_vertices)
   end
@@ -237,7 +250,7 @@ end
 function Renderer.draw_background()
   love.graphics.setBackgroundColor(bg_colour.r, bg_colour.g, bg_colour.b)
   Renderer.set_colour(bg_line_colour)
-  love.graphics.setLineWidth(0.8)
+  love.graphics.setLineWidth(unit_length / 30)
 
   for _, line in pairs(bg_lines) do
     local screen_vertices = Renderer.world_to_screen(line.vertices)
@@ -272,6 +285,15 @@ function Renderer.draw_slide_overlay(dir, _progress, opacity)
   })
 	love.graphics.rectangle('fill', rectanglex, rectangley, rectangle_width, rectangle_height)
 	love.graphics.pop()
+end
+
+-- Draw text on the top-left of the screen
+function Renderer.draw_text(text)
+  local offset = unit_length * 0.8
+  
+  Renderer.set_colour(stage_edge_colour)
+  love.graphics.setFont(font)
+  love.graphics.print(text, - screen_width / 2 + offset, - screen_height / 2 + offset)
 end
 
 -- Add an ArrowTile
@@ -403,6 +425,7 @@ function Renderer.draw_operators_arrowtiles()
     else love.graphics.polygon("fill", draw_item.arrowtile_vertices)
     end
     
+    love.graphics.setLineWidth(unit_length / 12)
     Renderer.set_colour(stage_edge_colour)
     love.graphics.polygon("line", draw_item.arrowtile_vertices)
 	end

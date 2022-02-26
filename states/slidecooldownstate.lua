@@ -93,7 +93,11 @@ local function draw_slide_overlay()
   Renderer.draw_slide_overlay(fixed_dir, overlay_progress, overlay_opacity)
 end
 
+local function draw_status_text()
+  Renderer.draw_text("Release")
+end
+
 -- Overlay is drawn on layer 1 (after BGlines)
-SlideCooldownState.draw = {[1] = draw_slide_overlay}
+SlideCooldownState.draw = {[1] = draw_slide_overlay, [3] = draw_status_text}
 
 return SlideCooldownState

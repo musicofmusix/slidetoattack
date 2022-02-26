@@ -28,6 +28,7 @@ local fixed_dir;
 local progress;
 local operator_movelist;
 local is_fixed_initial;
+local status_text;
 
 function SlideState.enter(args)
   screen_info = Renderer.get_screen_info()
@@ -38,14 +39,19 @@ function SlideState.enter(args)
   progress = 0
   operator_movelist = nil
   is_fixed_initial = false
+  status_text = "Slide"
 end
 
 local function draw_slide_overlay()
   if fixed_dir then Renderer.draw_slide_overlay(fixed_dir, progress) end
 end
 
+local function draw_status_text()
+  Renderer.draw_text(status_text)
+end
+
 -- Overlay is drawn on layer 1 (after BGlines)
-SlideState.draw = {[1] = draw_slide_overlay}
+SlideState.draw = {[1] = draw_slide_overlay, [3] = draw_status_text}
 
 -- Only called upon mouse movement
 function SlideState.mousemoved(dx, dy)
@@ -61,6 +67,8 @@ function SlideState.mousemoved(dx, dy)
   
   if fixed_dir then
     -- Get the end vertex of the screen where this direction is pointing
+    status_text = "Release"
+    
     local endx_coeff, endy_coeff;
     if fixed_dir.isn then endy_coeff = 0 else endy_coeff = 1 end
     if fixed_dir.ise then

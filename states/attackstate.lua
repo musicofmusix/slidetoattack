@@ -42,6 +42,12 @@ function AttackState.update(dt)
   end
 end
 
+local function draw_status_text()
+  Renderer.draw_text("Attack")
+end
+
+AttackState.draw = {[3] = draw_status_text}
+
 -- operator_movelist contains both move and attack data, extract the latter
 function AttackState.extract_attacklist(movelist)
   local attacklist = {}

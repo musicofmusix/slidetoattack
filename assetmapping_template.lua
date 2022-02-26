@@ -1,26 +1,33 @@
 -- Rename this file to assetmapping.lua and place it inside /assets
+-- Everything here assumes the root directory is /assets
 
 local AssetMapping = {}
 
-local friendlies = {}
-local enemies = {}
+local friendly_prefix = "subdirectory"
+local enemy_prefix = "subdirectory"
 
-friendlies.melee = {
-  "spine2d_sprite_subdirectory/filename_without_extension"
+local friendlies = {
+"Soldier/SniperRifle",
 }
-friendlies.ranged = {}
 
-enemies.melee = {}
-enemies.ranged = {}
+local enemies = {
+  "EnemySoldier/SMG"
+}
 
-function AssetMapping.get_name(is_friendly, class)
+local font_dir = "font/some_font.ttf"
+
+function AssetMapping.get_name(is_friendly)
   if is_friendly then
-    local index = math.random(#friendlies[class])
-    return friendlies[class][index]
+    local index = math.random(#friendlies)
+    return friendly_prefix .. friendlies[index]
   else
-    local index = math.random(#enemies[class])
-    return enemies[class][index]
+    local index = math.random(#enemies)
+    return enemy_prefix .. enemies[index]
   end
+end
+
+function AssetMapping.get_font()
+  return "assets/" .. font_dir
 end
 
 return AssetMapping

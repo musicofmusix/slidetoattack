@@ -31,4 +31,10 @@ function AttackCooldownState.update(dt)
   if progress == 0 then FSM.change_state(FSM.states.IdleState) end
 end
 
+local function draw_status_text()
+  Renderer.draw_text("Attack")
+end
+
+AttackCooldownState.draw = {[3] = draw_status_text}
+
 return AttackCooldownState
