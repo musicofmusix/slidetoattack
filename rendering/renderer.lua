@@ -56,10 +56,31 @@ local isometric_coefficient = 1.6
 local light_angle = 65 -- 0 to 90 inclusive; 45 is centred at the camera
 
 -- Colour palette
-local bg_colour = {r = 0.878, g = 0.878, b = 0.910}
-local bg_line_colour = {r = 0, g = 0, b = 0}
-local stage_edge_colour = {r = 0.157, g = 0.157, b = 0.157}
-local stage_base_fill_colour = {r = 0.9, g = 0.9, b = 0.9} -- This is the lightest colour
+palettes = {desert = {}, scifi = {}, lab = {}, forest = {}}
+palettes.desert.bg = {r = 0.827, g = 0.819, b = 0.729}
+palettes.desert.bgline = {r = 0, g = 0, b = 0}
+palettes.desert.stage = {r = 0.843, g = 0.768, b = 0.651}
+palettes.desert.stageedge = {r = 0.157, g = 0.157, b = 0.157}
+
+palettes.scifi.bg = {r = 0.121, g = 0.255, b = 0.235}
+palettes.scifi.bgline = {r = 0.408, g = 0.973, b = 0.847}
+palettes.scifi.stage = {r = 0.061, g = 0.175, b = 0.185}
+palettes.scifi.stageedge = {r = 0.408, g = 0.973, b = 0.847}
+
+palettes.lab.bg = {r = 0.878, g = 0.878, b = 0.91}
+palettes.lab.bgline = {r = 0.408, g = 0.408, b = 0.408}
+palettes.lab.stage = {r = 0.878, g = 0.878, b = 0.878}
+palettes.lab.stageedge = {r = 0.125, g = 0.125, b = 0.125}
+
+palettes.forest.bg = {r = 0.157, g = 0.22, b = 0.157}
+palettes.forest.bgline = {r = 0.533, g = 0.533, b = 0.439}
+palettes.forest.stage = {r = 0.314, g = 0.408, b = 0.376}
+palettes.forest.stageedge = {r = 0.266, g = 0.255, b = 0.078}
+
+local bg_colour;
+local bg_line_colour;
+local stage_edge_colour;
+local stage_base_fill_colour;
 local operator_colour = {r = 1, g = 1, b = 1, a = 1}
 local shadow_colour = {r = 0, g = 0, b = 0, a = 0.25}
 local slide_start_colour = {r = 0, g = 0, b = 0, a = 0.15}
@@ -85,9 +106,21 @@ function Renderer.init(_stage_size)
   screen_diag_angle = math.atan(screen_height / screen_width)
   screen_diag_perpendicular = screen_width / math.cos(screen_diag_angle)
 
+  -- Init random
+  math.randomseed(os.time())
+
   -- VERY important for preventing 'spiky' side tiles
   love.graphics.setLineJoin("bevel")
   love.graphics.setLineStyle("smooth")
+  
+  -- Pick a random colour palette
+  local palette_names = {"desert", "scifi", "lab", "forest"}
+  local palette = palettes[palette_names[math.random(4)]]
+  
+  bg_colour = palette.bg
+  bg_line_colour = palette.bgline
+  stage_edge_colour = palette.stageedge
+  stage_base_fill_colour = palette.stage
 
   if (screen_width < screen_height) then
     -- Divide by stage_size * 2 because one edge of a tile is length=2
